@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { moduleForPath, type BusinessType, type ModuleKey, type TypeProfile } from '@/data/account'
 import {
   BarChart3,
   Building2,
@@ -37,6 +38,7 @@ export const NAV: NavItem[] = [
     children: [
       { label: 'Factory Overview', to: '/factory' },
       { label: 'Users', to: '/factory/users' },
+      { label: 'Roles', to: '/factory/roles' },
       { label: 'Shifts', to: '/factory/shifts' },
     ],
   },
@@ -122,6 +124,39 @@ export const NAV: NavItem[] = [
   { label: 'Reports', icon: FileBarChart2, to: '/reports' },
   { label: 'Settings', icon: Settings, to: '/settings' },
 ]
+
+/**
+ * The sidebar for one business and one user (2.6, 3.6): the business type renames
+ * menus, and anyone but the Owner only sees the pages their role lets them view.
+ */
+export function navFor(type: BusinessType, p: TypeProfile, canView: (m: ModuleKey) => boolean, isOwner: boolean): NavItem[] {
+  const fg = type === 'weaving' ? 'Rolls' : type === 'polybag' ? 'Bundles' : 'Lots'
+  const rename: Record<string, string> = {
+    Looms: p.machines,
+    'Loom Dashboard': `${p.machine} Dashboard`,
+    'Loom Status': `${p.machine} Status`,
+    Yarn: p.rawMaterial,
+    'Yarn Inventory': `${p.rawMaterial} Inventory`,
+    'Yarn Purchases': `${p.rawMaterial} Purchases`,
+    'Yarn Issues': `${p.rawMaterial} Issues`,
+    Fabric: p.finishedGoods,
+    'Fabric Inventory': `${p.finishedGoods} Inventory`,
+    Rolls: fg,
+  }
+  const label = (l: string) => (type === 'weaving' ? l : rename[l] ?? l)
+  const allowed = (to: string) => {
+    if (isOwner) return true
+    const m = moduleForPath(to)
+    return !!m && canView(m)
+  }
+  return NAV.flatMap((item) => {
+    if (item.children) {
+      const children = item.children.filter((c) => allowed(c.to)).map((c) => ({ ...c, label: label(c.label) }))
+      return children.length ? [{ ...item, label: label(item.label), children }] : []
+    }
+    return allowed(item.to!) ? [{ ...item, label: label(item.label) }] : []
+  })
+}
 
 /** Is `path` inside the section rooted at `to`? Dashboard ('/') only matches exactly. */
 export function isActivePath(path: string, to: string, exact = false) {

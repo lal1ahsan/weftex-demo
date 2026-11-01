@@ -25,14 +25,6 @@ export const FACTORIES = [
   { id: 'ghw-krw', name: 'GH Weaving Unit 2', city: 'Khurrianwala', looms: 48 },
 ]
 
-export const CURRENT_USER = {
-  name: 'Ahmed Baryar',
-  firstName: 'Ahmed',
-  role: 'Owner',
-  email: 'demo@ghweaving.com',
-  initials: 'AH',
-}
-
 export const SHIFTS: {
   name: ShiftName
   code: string
@@ -84,7 +76,5 @@ export const USERS: User[] = [
   { id: 'U-11', name: 'Usman Tariq', email: 'usman.t@ghweaving.com', role: 'Supervisor', phone: '0315 3349 778', lastActive: '—', status: 'Invited' },
   { id: 'U-12', name: 'Imran Qureshi', email: 'imran.q@ghweaving.com', role: 'Sales', phone: '0302 7712 004', lastActive: '3 months ago', status: 'Disabled' },
 ]
-
-export const ROLES = ['Owner', 'Admin', 'Production Manager', 'Supervisor', 'Store Manager', 'Accountant', 'Sales', 'Quality Inspector', 'Operator']
 
 export const INSPECTORS = ['Rabia Anwar', 'Kashif Mahmood', 'Shazia Parveen']

@@ -21,7 +21,8 @@ import { Badge, Button, Card, CardBody, CardHeader, KpiCard, ProgressBar, Tabs, 
 import { BreakdownList, Legend, CHART } from '@/components/charts/ChartKit'
 import { DonutChart, DOWNTIME_COLORS, LoomEfficiencyChart, ProductionTrendChart } from '@/components/charts/Charts'
 import { useApp } from '@/context/AppState'
-import { CURRENT_USER, SHIFTS } from '@/data/factory'
+import { SHIFTS } from '@/data/factory'
+import { useAccount } from '@/context/Account'
 import { FABRICS, YARNS, yarnStatus } from '@/data/inventory'
 import { CUSTOMERS, ENERGY, SALES_ORDERS, customerById } from '@/data/commercial'
 import { costPerMeter } from '@/data/costing'
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const { production, downtime, looms } = useApp()
+  const { me } = useAccount()
   const [effView, setEffView] = useState<'lowest' | 'highest' | 'all'>('lowest')
   const [dtRange, setDtRange] = useState<'today' | 'week'>('today')
 
@@ -121,7 +123,7 @@ export default function DashboardPage() {
         <div>
           <p className="text-[13px] font-medium text-slate-500">{dateLong(DEMO_TODAY)}</p>
           <h1 className="mt-1 text-[28px] font-semibold text-slate-900">
-            {greeting}, {CURRENT_USER.firstName}
+            {greeting}, {me?.firstName}
           </h1>
           <p className="mt-1 text-[15px] text-slate-500">Here's what's happening in your factory today.</p>
         </div>

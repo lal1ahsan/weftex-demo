@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronDown, ChevronsLeft, ChevronsRight, LifeBuoy, X } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
-import { NAV, activeLeaf, type NavItem } from '@/routes/nav'
+import { activeLeaf, navFor, type NavItem } from '@/routes/nav'
+import { useAccount } from '@/context/Account'
 import { cn } from '@/utils/format'
 
 interface SidebarProps {
@@ -57,6 +58,8 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
 }
 
 function SidebarContent({ collapsed, active }: { collapsed: boolean; active?: string }) {
+  const { business, profile, can, isOwner } = useAccount()
+  const NAV = navFor(business?.type ?? 'weaving', profile, (m) => can(m), isOwner)
   const groupOf = (to?: string) => NAV.find((n) => n.children?.some((c) => c.to === to))?.label
   const [open, setOpen] = useState<string | undefined>(() => groupOf(active))
 
@@ -68,7 +71,7 @@ function SidebarContent({ collapsed, active }: { collapsed: boolean; active?: st
   return (
     <>
       <div className={cn('flex h-16 shrink-0 items-center', collapsed ? 'justify-center' : 'px-5')}>
-        <Link to="/" aria-label="GH Weaving — Dashboard">
+        <Link to="/" aria-label="Weftex — Dashboard">
           <Logo dark compact={collapsed} />
         </Link>
       </div>

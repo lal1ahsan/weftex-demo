@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { Bell, Building2, Globe, Plug, Receipt, Ruler } from 'lucide-react'
+import { Bell, Building2, Globe, Lock, Plug, Receipt, Ruler } from 'lucide-react'
 import { Badge, Button, Card, CardBody, CardHeader, Field, Input, PageHeader, Select, useToast } from '@/components/ui'
 import { FACTORY } from '@/data/factory'
+import { useAccount } from '@/context/Account'
+import { PRODUCT_UNITS, RAW_UNITS, TYPE_PROFILES, type BusinessType, type ProductUnit, type RawUnit } from '@/data/account'
 import { cn } from '@/utils/format'
 
 type Section = 'general' | 'production' | 'notifications' | 'integrations' | 'tax'
@@ -38,7 +40,29 @@ export default function SettingsPage() {
   const toast = useToast()
   const [section, setSection] = useState<Section>('general')
   const [notif, setNotif] = useState({ loomStop: true, target: true, lowStock: true, daily: true, orders: false })
-  const save = () => toast.success('Settings saved.', 'Changes apply to this demo session only.')
+  const { business, updateBusiness } = useAccount()
+  const [biz, setBiz] = useState(() => ({
+    name: business?.name ?? '',
+    type: business?.type ?? 'weaving',
+    otherTypeName: business?.otherTypeName ?? '',
+    rawUnit: business?.rawUnit ?? 'Bags',
+    productUnit: business?.productUnit ?? 'Meters',
+  }))
+  const [nameError, setNameError] = useState<string>()
+  const locked = !!business?.hasRecords
+  const save = () => {
+    if (section === 'general') {
+      const name = biz.name.trim()
+      if (!name) return setNameError('Business name is required')
+      if (name.length > 100) return setNameError('Use at most 100 characters')
+      updateBusiness(
+        locked
+          ? { name }
+          : { name, type: biz.type, otherTypeName: biz.type === 'other' ? biz.otherTypeName.trim() || undefined : undefined, rawUnit: biz.rawUnit, productUnit: biz.productUnit },
+      )
+    }
+    toast.success('Settings saved.', section === 'general' ? undefined : 'Changes apply to this demo session only.')
+  }
 
   return (
     <div>
@@ -62,8 +86,44 @@ export default function SettingsPage() {
             <>
               <CardHeader title="General" subtitle="Factory details and regional preferences" />
               <CardBody className="grid gap-4 sm:grid-cols-2">
-                <Field label="Factory name"><Input defaultValue={FACTORY.name} /></Field>
-                <Field label="City"><Select defaultValue="Faisalabad" options={['Faisalabad', 'Lahore', 'Karachi', 'Multan', 'Sheikhupura']} /></Field>
+                <Field label="Business name" required error={nameError} hint="Shown in the sidebar, reports and exports above the factory name">
+                  <Input
+                    maxLength={100}
+                    value={biz.name}
+                    onChange={(e) => {
+                      setBiz((b) => ({ ...b, name: e.target.value }))
+                      setNameError(undefined)
+                    }}
+                    error={!!nameError}
+                  />
+                </Field>
+                <Field label="Factories" hint="Each factory's name, city, stores and warehouses are set in Factories">
+                  <Input disabled value={business?.factories.map((f) => `${f.name} (${f.city})`).join(', ') ?? ''} />
+                </Field>
+                <div className="rounded-xl border border-line bg-slate-50/60 p-4 sm:col-span-2">
+                  <p className="flex items-center gap-2 text-[13px] font-semibold text-slate-800">
+                    Business type and units {locked && <Lock className="size-3.5 text-slate-400" aria-label="Locked" />}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {locked ? "Business type and units can't change once records exist." : 'Editable until the first stock or production record is saved.'}
+                  </p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                    <Field label="Business type">
+                      <Select disabled={locked} value={biz.type} onChange={(e) => setBiz((b) => ({ ...b, type: e.target.value as BusinessType }))} options={(Object.keys(TYPE_PROFILES) as BusinessType[]).map((t) => ({ value: t, label: TYPE_PROFILES[t].label }))} />
+                    </Field>
+                    <Field label="Raw material input unit">
+                      <Select disabled={locked} value={biz.rawUnit} onChange={(e) => setBiz((b) => ({ ...b, rawUnit: e.target.value as RawUnit }))} options={RAW_UNITS} />
+                    </Field>
+                    <Field label="Final product unit">
+                      <Select disabled={locked} value={biz.productUnit} onChange={(e) => setBiz((b) => ({ ...b, productUnit: e.target.value as ProductUnit }))} options={PRODUCT_UNITS} />
+                    </Field>
+                    {biz.type === 'other' && (
+                      <Field label="Type of business" className="sm:col-span-3">
+                        <Input disabled={locked} maxLength={60} value={biz.otherTypeName} onChange={(e) => setBiz((b) => ({ ...b, otherTypeName: e.target.value }))} />
+                      </Field>
+                    )}
+                  </div>
+                </div>
                 <Field label="Currency"><Select defaultValue="PKR" options={[{ value: 'PKR', label: 'PKR — Pakistani Rupee' }, { value: 'USD', label: 'USD — US Dollar' }]} /></Field>
                 <Field label="Language"><Select defaultValue="en" options={[{ value: 'en', label: 'English' }, { value: 'ur', label: 'اردو — Urdu' }]} /></Field>
                 <Field label="Time zone"><Input defaultValue={FACTORY.timezone} disabled /></Field>
@@ -113,7 +173,7 @@ export default function SettingsPage() {
           )}
           {section === 'integrations' && (
             <>
-              <CardHeader title="Integrations" subtitle="Connect GH Weaving to the tools you already use" />
+              <CardHeader title="Integrations" subtitle="Connect Weftex to the tools you already use" />
               <CardBody className="grid gap-3 sm:grid-cols-2">
                 {[
                   { name: 'WhatsApp Business', body: 'Daily reports and loom alerts', icon: <Globe className="size-5" /> },

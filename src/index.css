@@ -94,6 +94,11 @@
       repeating-linear-gradient(0deg, rgb(255 255 255 / 0.035) 0 2px, transparent 2px 14px),
       repeating-linear-gradient(90deg, rgb(255 255 255 / 0.05) 0 2px, transparent 2px 14px);
   }
+  .weave-pattern-light {
+    background-image:
+      repeating-linear-gradient(0deg, rgb(44 71 204 / 0.025) 0 2px, transparent 2px 18px),
+      repeating-linear-gradient(90deg, rgb(44 71 204 / 0.035) 0 2px, transparent 2px 18px);
+  }
 }
 
 /* Recharts polish */

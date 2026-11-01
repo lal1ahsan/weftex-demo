@@ -21,7 +21,7 @@ export function Logo({ dark = false, compact = false, className }: { dark?: bool
       {!compact && (
         <div className="leading-none">
           <div className={cn('font-display text-[17px] font-bold tracking-tight', dark ? 'text-white' : 'text-slate-900')}>
-            GH <span className={dark ? 'text-brand-300' : 'text-brand-600'}>WEAVING</span>
+            Weft<span className={dark ? 'text-brand-300' : 'text-brand-600'}>ex</span>
           </div>
           <div className={cn('mt-1 text-[10.5px] font-medium tracking-[0.08em] uppercase', dark ? 'text-slate-400' : 'text-slate-500')}>Factory Management</div>
         </div>

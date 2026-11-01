@@ -1,45 +1,50 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, BarChart3, Eye, EyeOff, Factory, Lock, Mail, ShieldCheck, Timer, Zap } from 'lucide-react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowRight, BarChart3, Eye, EyeOff, Factory, Lock, ShieldCheck, Smartphone, Timer, Zap } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
 import { Button, Field, Input, useToast } from '@/components/ui'
-import { useApp } from '@/context/AppState'
-
-const DEMO_EMAIL = 'demo@ghweaving.com'
-const DEMO_PASSWORD = 'demo123'
+import { useAccount } from '@/context/Account'
+import { DEMO_OWNER, EMAIL_RE, normalizePhone } from '@/data/account'
 
 export default function LoginPage() {
-  const { isAuthed, signIn } = useApp()
+  const { ready, me, signIn, landingFor } = useAccount()
   const navigate = useNavigate()
   const toast = useToast()
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(true)
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({})
 
-  if (isAuthed) return <Navigate to="/" replace />
+  if (ready && me && !loading) return <Navigate to={landingFor(me)} replace />
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     const next: typeof errors = {}
-    if (!email.trim()) next.email = 'Enter your email address'
-    else if (!/^\S+@\S+\.\S+$/.test(email)) next.email = 'Enter a valid email address'
+    const id = email.trim()
+    const looksLikePhone = /^(03|\+92)/.test(id.replace(/\s/g, ''))
+    if (!id) next.email = 'Enter your mobile number or email'
+    else if (looksLikePhone ? !normalizePhone(id) : !EMAIL_RE.test(id)) next.email = 'Enter a valid mobile number or email'
     if (!password) next.password = 'Enter your password'
     setErrors(next)
     if (Object.keys(next).length) return
     setLoading(true)
-    setTimeout(() => {
-      signIn()
-      const from = (location.state as { from?: string } | null)?.from
-      navigate(from && from !== '/login' ? from : '/', { replace: true })
-    }, 650)
+    const res = await signIn(id, password, remember)
+    if (!res.ok) {
+      setLoading(false)
+      setErrors({ form: res.error })
+      return
+    }
+    const from = (location.state as { from?: string } | null)?.from
+    const landing = landingFor(res.account)
+    navigate(landing === '/' && from && from !== '/login' ? from : landing, { replace: true })
   }
 
   const fillDemo = () => {
-    setEmail(DEMO_EMAIL)
-    setPassword(DEMO_PASSWORD)
+    setEmail(DEMO_OWNER.email)
+    setPassword(DEMO_OWNER.password)
     setErrors({})
   }
 
@@ -55,7 +60,7 @@ export default function LoginPage() {
         <div className="relative">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-brand-200">
             <span className="size-1.5 rounded-full bg-emerald-400" />
-            Built for weaving factories in Pakistan
+            Built for factories in Pakistan
           </p>
           <h1 className="max-w-md text-[40px] leading-[1.1] font-semibold tracking-tight">
             Know what every loom produced, consumed and earned.
@@ -113,11 +118,12 @@ export default function LoginPage() {
           <div className="w-full max-w-[400px]">
             <Logo className="mb-10 lg:hidden" />
             <h2 className="text-[28px] font-semibold text-slate-900">Welcome back</h2>
-            <p className="mt-1.5 text-[15px] text-slate-500">Sign in to the GH Weaving factory management system.</p>
+            <p className="mt-1.5 text-[15px] text-slate-500">Sign in to Weftex to run your factory.</p>
 
             <form onSubmit={submit} className="mt-8 space-y-5" noValidate>
-              <Field label="Email" htmlFor="email" error={errors.email}>
-                <Input id="email" type="email" autoComplete="email" icon={<Mail />} placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} error={!!errors.email} className="h-11" />
+              {errors.form && <p className="rounded-lg bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 ring-1 ring-rose-600/15" role="alert">{errors.form}</p>}
+              <Field label="Mobile number or email" htmlFor="email" error={errors.email}>
+                <Input id="email" type="text" autoComplete="username" icon={<Smartphone />} placeholder="03xx xxxxxxx or you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} error={!!errors.email} className="h-11" />
               </Field>
               <Field label="Password" htmlFor="password" error={errors.password}>
                 <div className="relative">
@@ -139,8 +145,8 @@ export default function LoginPage() {
               </Field>
               <div className="flex items-center justify-between text-[13px]">
                 <label className="flex items-center gap-2 text-slate-600">
-                  <input type="checkbox" defaultChecked className="size-4 rounded border-slate-300 accent-brand-600" />
-                  Keep me signed in
+                  <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="size-4 rounded border-slate-300 accent-brand-600" />
+                  Remember me
                 </label>
                 <button type="button" onClick={() => toast.demo('Password reset is available in the production version.')} className="font-medium text-brand-600 hover:text-brand-700">
                   Forgot password?
@@ -150,20 +156,26 @@ export default function LoginPage() {
                 {loading ? 'Signing in…' : 'Sign In'}
                 {!loading && <ArrowRight className="size-4" />}
               </Button>
+              <p className="text-center text-[13.5px] text-slate-600">
+                New to Weftex?{' '}
+                <Link to="/signup" className="font-semibold text-brand-600 hover:text-brand-700">
+                  Create an account
+                </Link>
+              </p>
             </form>
 
             <div className="mt-8 rounded-2xl border border-dashed border-brand-200 bg-brand-50/50 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[13px] font-semibold text-brand-800">Demo Account</p>
+                  <p className="text-[13px] font-semibold text-brand-800">Demo account · GH Weaving Mills</p>
                   <dl className="mt-2 space-y-1 text-[13px] text-slate-600">
                     <div className="flex gap-2">
                       <dt className="w-16 text-slate-500">Email</dt>
-                      <dd className="font-mono font-medium text-slate-800">{DEMO_EMAIL}</dd>
+                      <dd className="font-mono font-medium text-slate-800">{DEMO_OWNER.email}</dd>
                     </div>
                     <div className="flex gap-2">
                       <dt className="w-16 text-slate-500">Password</dt>
-                      <dd className="font-mono font-medium text-slate-800">{DEMO_PASSWORD}</dd>
+                      <dd className="font-mono font-medium text-slate-800">{DEMO_OWNER.password}</dd>
                     </div>
                   </dl>
                 </div>
@@ -178,7 +190,7 @@ export default function LoginPage() {
           <span className="inline-flex items-center gap-1.5">
             <ShieldCheck className="size-3.5" /> Interactive product demo · sample data only
           </span>
-          <span>© 2026 GH Weaving</span>
+          <Link to="/admin/login" className="hover:text-slate-600">© 2026 Weftex · Admin</Link>
         </div>
       </div>
     </div>

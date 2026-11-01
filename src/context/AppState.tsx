@@ -3,20 +3,7 @@ import type { AppNotification, DowntimeRecord, Loom, LoomStatus, ProductionRecor
 import { DOWNTIME, LOOMS, PRODUCTION } from '@/data/production'
 import { NOTIFICATIONS } from '@/data/commercial'
 
-const AUTH_KEY = 'ghw-demo-auth'
-
-function readAuth() {
-  try {
-    return localStorage.getItem(AUTH_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
 interface AppState {
-  isAuthed: boolean
-  signIn: () => void
-  signOut: () => void
   production: ProductionRecord[]
   addProduction: (r: Omit<ProductionRecord, 'id' | 'efficiency'>) => ProductionRecord
   downtime: DowntimeRecord[]
@@ -35,29 +22,10 @@ const Ctx = createContext<AppState | null>(null)
  * so the client sees their entries appear across screens.
  */
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [isAuthed, setAuthed] = useState(readAuth)
   const [production, setProduction] = useState(PRODUCTION)
   const [downtime, setDowntime] = useState(DOWNTIME)
   const [loomStatus, setLoomStatusMap] = useState<Record<string, LoomStatus>>({})
   const [notifications, setNotifications] = useState(NOTIFICATIONS)
-
-  const signIn = useCallback(() => {
-    try {
-      localStorage.setItem(AUTH_KEY, '1')
-    } catch {
-      /* storage unavailable — session-only auth */
-    }
-    setAuthed(true)
-  }, [])
-
-  const signOut = useCallback(() => {
-    try {
-      localStorage.removeItem(AUTH_KEY)
-    } catch {
-      /* ignore */
-    }
-    setAuthed(false)
-  }, [])
 
   const addProduction = useCallback((r: Omit<ProductionRecord, 'id' | 'efficiency'>) => {
     const rec: ProductionRecord = {
@@ -91,8 +59,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const markAllRead = useCallback(() => setNotifications((n) => n.map((x) => ({ ...x, read: true }))), [])
 
   const value = useMemo(
-    () => ({ isAuthed, signIn, signOut, production, addProduction, downtime, addDowntime, looms, setLoomStatus, notifications, markRead, markAllRead }),
-    [isAuthed, signIn, signOut, production, addProduction, downtime, addDowntime, looms, setLoomStatus, notifications, markRead, markAllRead],
+    () => ({ production, addProduction, downtime, addDowntime, looms, setLoomStatus, notifications, markRead, markAllRead }),
+    [production, addProduction, downtime, addDowntime, looms, setLoomStatus, notifications, markRead, markAllRead],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

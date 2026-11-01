@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, Building2, Check, ChevronDown, CircleHelp, LogOut, Menu, Search, Settings, User, AlertTriangle, CheckCircle2, Info, OctagonAlert, BookOpen, MessageCircle, PlayCircle } from 'lucide-react'
 import { useApp } from '@/context/AppState'
 import { useToast } from '@/components/ui'
-import { CURRENT_USER, FACTORIES } from '@/data/factory'
+import { useAccount } from '@/context/Account'
 import { useClickOutside } from '@/hooks/useClickOutside'
 import { cn } from '@/utils/format'
 import { GlobalSearch } from './GlobalSearch'
@@ -36,7 +36,16 @@ const TONE_BG: Record<AppNotification['tone'], string> = {
 export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
   const navigate = useNavigate()
   const toast = useToast()
-  const { notifications, markRead, markAllRead, signOut } = useApp()
+  const { notifications, markRead, markAllRead } = useApp()
+  const { me, role, business, signOut } = useAccount()
+  const factories = (business?.factories ?? []).filter((f) => me?.factoryIds === 'all' || me?.factoryIds.includes(f.id))
+  const user = {
+    name: `${me?.firstName ?? ''} ${me?.lastName ?? ''}`.trim(),
+    firstName: me?.firstName ?? '',
+    initials: `${me?.firstName?.[0] ?? ''}${me?.lastName?.[0] ?? ''}`.toUpperCase(),
+    role: role?.name ?? '',
+    email: me?.email || me?.phone || '',
+  }
   const [menu, setMenu] = useState<'factory' | 'notifications' | 'help' | 'user' | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const close = useCallback(() => setMenu(null), [])
@@ -71,14 +80,14 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
               <Building2 className="size-[18px]" />
             </span>
             <span className="leading-tight">
-              <span className="block text-sm font-semibold whitespace-nowrap text-slate-900">{FACTORIES[0].name}</span>
-              <span className="block text-xs text-slate-500">{FACTORIES[0].city}</span>
+              <span className="block text-sm font-semibold whitespace-nowrap text-slate-900">{factories[0]?.name}</span>
+              <span className="block text-xs text-slate-500">{business?.name} · {factories[0]?.city}</span>
             </span>
             <ChevronDown className="size-4 text-slate-400" />
           </button>
           <Dropdown open={menu === 'factory'} onClose={close} className="right-auto left-0 w-72 p-2">
             <p className="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-wide text-slate-400 uppercase">Your factories</p>
-            {FACTORIES.map((f, i) => (
+            {factories.map((f, i) => (
               <button
                 key={f.id}
                 onClick={() => {
@@ -93,7 +102,7 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
                 <span className="flex-1">
                   <span className="block text-sm font-medium text-slate-900">{f.name}</span>
                   <span className="block text-xs text-slate-500">
-                    {f.city} · {f.looms} looms
+                    {f.city}
                   </span>
                 </span>
                 {i === 0 && <Check className="size-4 text-brand-600" />}
@@ -192,17 +201,17 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
           {/* User */}
           <div className="relative ml-1">
             <button onClick={() => toggle('user')} className="flex items-center gap-2 rounded-xl py-1 pr-2 pl-1 hover:bg-slate-100">
-              <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-semibold text-white">{CURRENT_USER.initials}</span>
+              <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-semibold text-white">{user.initials}</span>
               <span className="hidden text-left leading-tight md:block">
-                <span className="block text-sm font-semibold text-slate-900">{CURRENT_USER.firstName}</span>
-                <span className="block text-xs text-slate-500">{CURRENT_USER.role}</span>
+                <span className="block text-sm font-semibold text-slate-900">{user.firstName}</span>
+                <span className="block text-xs text-slate-500">{user.role}</span>
               </span>
               <ChevronDown className="hidden size-4 text-slate-400 md:block" />
             </button>
             <Dropdown open={menu === 'user'} onClose={close} className="w-60 p-2">
               <div className="border-b border-line px-3 pt-2 pb-3">
-                <p className="text-sm font-semibold text-slate-900">{CURRENT_USER.name}</p>
-                <p className="text-xs text-slate-500">{CURRENT_USER.email}</p>
+                <p className="text-sm font-semibold text-slate-900">{user.name}</p>
+                <p className="text-xs text-slate-500">{user.email}</p>
               </div>
               <div className="pt-1">
                 {[

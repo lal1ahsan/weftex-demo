@@ -4,6 +4,13 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { PageLoader } from '@/components/ui/PageLoader'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const SignUpPage = lazy(() => import('@/pages/auth/SignUpPage'))
+const VerifyPhonePage = lazy(() => import('@/pages/auth/VerifyPhonePage'))
+const OnboardingPage = lazy(() => import('@/pages/onboarding/OnboardingPage'))
+const PendingPage = lazy(() => import('@/pages/onboarding/PendingPage'))
+const AdminLoginPage = lazy(() => import('@/pages/admin/AdminLoginPage'))
+const AdminBusinessesPage = lazy(() => import('@/pages/admin/AdminBusinessesPage'))
+const RolesPage = lazy(() => import('@/pages/factory/RolesPage'))
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'))
 const FactoryOverviewPage = lazy(() => import('@/pages/factory/FactoryOverviewPage'))
 const UsersPage = lazy(() => import('@/pages/factory/UsersPage'))
@@ -47,11 +54,20 @@ export function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/signup/verify" element={<VerifyPhonePage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/pending" element={<PendingPage />} />
+        <Route path="/admin" element={<Navigate to="/admin/businesses" replace />} />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin/businesses" element={<AdminBusinessesPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
 
           <Route path="factory" element={<FactoryOverviewPage />} />
           <Route path="factory/users" element={<UsersPage />} />
+          <Route path="factory/roles" element={<RolesPage />} />
+          <Route path="no-access" element={null} />
           <Route path="factory/shifts" element={<ShiftsPage />} />
 
           <Route path="looms" element={<LoomDashboardPage />} />
