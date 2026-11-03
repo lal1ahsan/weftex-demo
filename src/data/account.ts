@@ -1,5 +1,5 @@
 /**
- * Accounts, businesses and roles for the demo (PRD 2.4–2.7, 3.3, 3.6, 3.7).
+ * Accounts, businesses and roles for the demo (PRD 2.1–2.4, 3.3, 3.6, 3.7).
  * There is no back end: everything lives in this browser's localStorage, so a
  * business signed up here can be approved from /admin in the same browser.
  */
@@ -38,16 +38,24 @@ export interface Business {
   otherTypeName?: string
   rawUnit: RawUnit
   productUnit: ProductUnit
+  /** The business's own words, pre-filled by type at onboarding and editable any time (2.2). */
+  names?: BusinessNames
   status: BusinessStatus
   statusReason?: string
   ownerId: string
   factories: Factory[]
-  /** Business type and units lock once the first stock or production record exists (2.5, 11.1). */
+  /** Business type and units lock once the first stock or production record exists (2.2, 11.1). */
   hasRecords: boolean
   ntn?: string
   strn?: string
   createdAt: string
   audit: AuditEntry[]
+}
+
+export interface BusinessNames {
+  rawMaterial: string
+  finishedGoods: string
+  machines: string
 }
 
 export interface Role {
@@ -75,6 +83,9 @@ export interface OnboardingDraft {
   otherTypeName: string
   rawUnit?: RawUnit
   productUnit?: ProductUnit
+  rawMaterialName?: string
+  finishedGoodsName?: string
+  machineName?: string
   factoryName: string
   city: string
 }
@@ -85,7 +96,7 @@ export interface Account {
   firstName: string
   lastName: string
   email: string
-  /** Stored as +923… (PRD 2.4). Empty for users added with only an email. */
+  /** Stored as +923… (PRD 2.1). Empty for users added with only an email. */
   phone: string
   passwordHash: string
   phoneVerified: boolean
@@ -122,7 +133,7 @@ export interface Db {
 }
 
 /* ------------------------------------------------------------------ */
-/* Business types (2.6)                                                */
+/* Business types (2.3)                                                */
 /* ------------------------------------------------------------------ */
 
 export interface TypeProfile {
@@ -151,13 +162,13 @@ export const TYPE_PROFILES: Record<BusinessType, TypeProfile> = {
   },
   polybag: {
     label: 'Poly bag manufacturing',
-    short: 'Extruders, printing, cutting & sealing, bags in bundles',
+    short: 'Extruders, circular looms, printing, cutting & sealing, bags in bundles',
     defaultRaw: 'Kg',
     defaultProduct: 'Bags',
     machine: 'Machine',
     machines: 'Machines',
-    rawMaterial: 'Raw Material',
-    finishedGoods: 'Finished Goods',
+    rawMaterial: 'Granules',
+    finishedGoods: 'Bags',
     hasSizing: false,
   },
   other: {
@@ -165,11 +176,26 @@ export const TYPE_PROFILES: Record<BusinessType, TypeProfile> = {
     short: 'Your own machines, raw materials and products',
     machine: 'Machine',
     machines: 'Machines',
-    rawMaterial: 'Raw Material',
-    finishedGoods: 'Finished Goods',
+    rawMaterial: '',
+    finishedGoods: '',
     hasSizing: false,
   },
 }
+
+/** "Looms" → "Loom", "Machines" → "Machine"; anything else is used as typed. */
+export function singular(word: string) {
+  return /[^s]s$/i.test(word) ? word.slice(0, -1) : word
+}
+
+/** The type's profile in the business's own words (2.2, 2.3). */
+export function profileFor(b?: Pick<Business, 'type' | 'names'>): TypeProfile {
+  const base = TYPE_PROFILES[b?.type ?? 'weaving']
+  const n = b?.names
+  if (!n) return { ...base, rawMaterial: base.rawMaterial || 'Raw Material', finishedGoods: base.finishedGoods || 'Finished Goods' }
+  return { ...base, rawMaterial: n.rawMaterial, finishedGoods: n.finishedGoods, machines: n.machines, machine: singular(n.machines) }
+}
+
+export const NAME_MAX = 30
 
 export const RAW_UNITS: RawUnit[] = ['Bags', 'Kg', 'Tons']
 export const PRODUCT_UNITS: ProductUnit[] = ['Meters', 'Kg', 'Tons', 'Bags']
@@ -203,7 +229,7 @@ export type ModuleKey =
 
 export interface ModuleDef {
   key: ModuleKey
-  /** Label per business type; the panel uses the business's own words (2.6). */
+  /** Label per business type; the panel uses the business's own words (2.3). */
   label: (p: TypeProfile) => string
   /** Route of the module's first page in the demo, if it has one. */
   to?: string
@@ -273,7 +299,7 @@ export function moduleForPath(path: string): ModuleKey | undefined {
 }
 
 /* ------------------------------------------------------------------ */
-/* Starting roles (3.3 permissions table, 2.6)                         */
+/* Starting roles (3.3 permissions table, 2.3)                         */
 /* ------------------------------------------------------------------ */
 
 const V: Perm = { view: true, add: false, edit: false }
@@ -375,7 +401,7 @@ const WEAVING_ROLES: RoleTemplate[] = [
   },
 ]
 
-/** Poly bag manufacturing and Other start from the 2.6 list; each business can change them. */
+/** Poly bag manufacturing and Other start from the 2.3 list; each business can change them. */
 const POLYBAG_ROLES: RoleTemplate[] = [
   { ...WEAVING_ROLES[0], description: 'Technical Master who runs the floor and checks production', perms: { dashboard: V, looms: VAE, shifts: VE, production: VE, downtime: VAE, yarnInventory: V, yarnIssues: V, fabric: V, reports: V }, reports: ['Production', 'Downtime'] },
   { ...WEAVING_ROLES[1], description: 'Machine mechanics who repair stopped machines' },
@@ -485,7 +511,7 @@ export function seedRoles(businessId: string, type: BusinessType): Role[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Phone, email and password helpers (1.1, 2.4)                        */
+/* Phone, email and password helpers (1.1, 2.1)                        */
 /* ------------------------------------------------------------------ */
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
@@ -518,6 +544,7 @@ export async function hashPassword(password: string) {
 
 /** Demo sign-in details, shown in the demo boxes on the login pages. */
 export const DEMO_OWNER = { email: 'demo@ghweaving.com', password: 'demo123' }
+export const DEMO_POLY_OWNER = { email: 'demo@alnoorpolypack.com', password: 'demo123' }
 export const DEMO_ADMIN = { email: 'admin@weftex.pk', password: 'admin123' }
 
 export async function seedDb(): Promise<Db> {
@@ -583,6 +610,7 @@ export async function seedDb(): Promise<Db> {
     type: 'weaving',
     rawUnit: 'Bags',
     productUnit: 'Meters',
+    names: { rawMaterial: 'Yarn', finishedGoods: 'Fabric', machines: 'Looms' },
     status: 'Active',
     ownerId: 'U-01',
     factories: [
@@ -596,13 +624,76 @@ export async function seedDb(): Promise<Db> {
     audit: [{ at: '2026-09-01T11:30:00.000Z', by: 'Weftex admin', action: 'Approved' }],
   }
 
+  const poly = await seedPolyBusiness()
+
   return {
     version: 1,
-    businesses: [business],
-    accounts,
-    roles,
+    businesses: [business, poly.business],
+    accounts: [...accounts, ...poly.accounts],
+    roles: [...roles, ...poly.roles],
     admins: [{ id: 'A-01', name: 'Weftex Admin', email: DEMO_ADMIN.email, phone: '+923001234567', passwordHash: await hashPassword(DEMO_ADMIN.password) }],
     signups: [],
     failedLogins: {},
   }
+}
+
+/** The Poly bag manufacturing demo business: extruders, circular looms, printing and cutting & sealing (2.3). */
+export async function seedPolyBusiness(): Promise<{ business: Business; accounts: Account[]; roles: Role[] }> {
+  const businessId = 'biz-poly'
+  const roles = seedRoles(businessId, 'polybag')
+  const roleId = (key: string) => roles.find((r) => r.systemKey === key)!.id
+  const ownerHash = await hashPassword(DEMO_POLY_OWNER.password)
+  const now = new Date().toISOString()
+
+  const person = (id: string, first: string, last: string, role: string, phone: string, lastActive: string, extra: Partial<Account> = {}): Account => ({
+    id,
+    businessId,
+    firstName: first,
+    lastName: last,
+    email: `${first.toLowerCase()}@alnoorpolypack.com`,
+    phone: normalizePhone(phone) ?? '',
+    passwordHash: '',
+    phoneVerified: true,
+    emailVerified: true,
+    roleId: roleId(role),
+    factoryIds: ['anp-lhr'],
+    canSignIn: true,
+    status: 'Active',
+    language: 'English',
+    lastActive,
+    createdAt: now,
+    ...extra,
+  })
+
+  const accounts: Account[] = [
+    person('P-01', 'Bilal', 'Ahmed', 'owner', '0300 4412873', 'Just now', { email: DEMO_POLY_OWNER.email, passwordHash: ownerHash, factoryIds: 'all' }),
+    person('P-02', 'Shahid', 'Mehmood', 'tm', '0333 4127790', '6 min ago'),
+    person('P-03', 'Javed', 'Iqbal', 'mechanics', '0345 8810234', '20 min ago'),
+    person('P-04', 'Arif', 'Hussain', 'store-manager', '0301 7765123', '15 min ago'),
+    person('P-05', 'Nadeem', 'Abbas', 'finished-goods-manager', '0321 9934410', '1 hour ago'),
+    person('P-06', 'Ayesha', 'Khan', 'accountant', '0322 4419087', '35 min ago'),
+    person('P-07', 'Usman', 'Ghani', 'supervisor', '0312 5501276', '2 hours ago', { supervisorPerms: { production: VA, downtime: VA }, supervisorSeeMoney: false }),
+    person('P-08', 'Sher', 'Khan', 'security-guard', '0315 2298441', '—', { status: 'Invited' }),
+    person('P-09', 'Imran', 'Ali', 'machine-operator', '', '—', { email: '', canSignIn: false }),
+    person('P-10', 'Waqar', 'Younis', 'machine-operator', '', '—', { email: '', canSignIn: false }),
+  ]
+
+  const business: Business = {
+    id: businessId,
+    name: 'Al-Noor Poly Pack',
+    type: 'polybag',
+    rawUnit: 'Kg',
+    productUnit: 'Bags',
+    names: { rawMaterial: 'Granules', finishedGoods: 'Bags', machines: 'Machines' },
+    status: 'Active',
+    ownerId: 'P-01',
+    factories: [{ id: 'anp-lhr', name: 'Al-Noor Poly Pack', city: 'Lahore' }],
+    hasRecords: true,
+    ntn: '7781204-3',
+    strn: '03-11-9876-221-55',
+    createdAt: '2026-09-05T09:00:00.000Z',
+    audit: [{ at: '2026-09-06T10:15:00.000Z', by: 'Weftex admin', action: 'Approved' }],
+  }
+
+  return { business, accounts, roles }
 }

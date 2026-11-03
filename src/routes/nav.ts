@@ -126,11 +126,12 @@ export const NAV: NavItem[] = [
 ]
 
 /**
- * The sidebar for one business and one user (2.6, 3.6): the business type renames
+ * The sidebar for one business and one user (2.3, 3.6): the business type renames
  * menus, and anyone but the Owner only sees the pages their role lets them view.
  */
 export function navFor(type: BusinessType, p: TypeProfile, canView: (m: ModuleKey) => boolean, isOwner: boolean): NavItem[] {
   const fg = type === 'weaving' ? 'Rolls' : type === 'polybag' ? 'Bundles' : 'Lots'
+  // The business's own names (2.2) rename menus for every type; Weaving's defaults are the menu names themselves.
   const rename: Record<string, string> = {
     Looms: p.machines,
     'Loom Dashboard': `${p.machine} Dashboard`,
@@ -142,8 +143,9 @@ export function navFor(type: BusinessType, p: TypeProfile, canView: (m: ModuleKe
     Fabric: p.finishedGoods,
     'Fabric Inventory': `${p.finishedGoods} Inventory`,
     Rolls: fg,
+    'Cost per Meter': type === 'polybag' ? 'Cost per Bag' : 'Cost per Meter',
   }
-  const label = (l: string) => (type === 'weaving' ? l : rename[l] ?? l)
+  const label = (l: string) => rename[l] ?? l
   const allowed = (to: string) => {
     if (isOwner) return true
     const m = moduleForPath(to)

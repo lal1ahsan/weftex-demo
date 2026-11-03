@@ -4,6 +4,7 @@ import { Button, Card, CardBody, CardHeader, DetailItem, KpiCard, PageHeader, us
 import { useApp } from '@/context/AppState'
 import { FACTORY, OPERATORS, SHIFTS, USERS } from '@/data/factory'
 import { num } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 export default function FactoryOverviewPage() {
   const toast = useToast()
@@ -17,7 +18,7 @@ export default function FactoryOverviewPage() {
     <div>
       <PageHeader
         title="Factory Overview"
-        description="Company profile, halls, warehouses and utilities."
+        description={`Company profile, ${TERMS.area.toLowerCase()}s, warehouses and utilities.`}
         breadcrumbs={[{ label: 'Factory' }, { label: 'Factory Overview' }]}
         actions={
           <Button icon={<Pencil className="size-4" />} onClick={() => toast.demo('Editing factory settings is available in the production version.')}>
@@ -26,7 +27,7 @@ export default function FactoryOverviewPage() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Looms" value={looms.length} icon={<Factory />} to="/looms/list" sub={<span>3 halls</span>} />
+        <KpiCard label={TERMS.machines} value={looms.length} icon={<Factory />} to="/looms/list" sub={<span>{TERMS.areas.length} {TERMS.area.toLowerCase()}s</span>} />
         <KpiCard label="Operators" value={OPERATORS.length} icon={<Users />} accent="teal" sub={<span>3 shifts</span>} to="/factory/shifts" />
         <KpiCard label="System Users" value={USERS.filter((u) => u.status === 'Active').length} icon={<Users />} accent="violet" to="/factory/users" />
         <KpiCard label="Connected Load" value={num(FACTORY.sanctionedLoadKw)} unit="kW" icon={<Zap />} accent="amber" sub={<span>+ {FACTORY.solarCapacityKw} kW solar</span>} to="/electricity/grid" />
@@ -57,7 +58,7 @@ export default function FactoryOverviewPage() {
               <DetailItem label="Currency" value="Pakistani Rupee (PKR)" />
               <DetailItem label="Time zone" value={FACTORY.timezone} />
               <DetailItem label="Fiscal year" value={FACTORY.fiscalYear} />
-              <DetailItem label="FESCO reference" value={FACTORY.fescoReference} />
+              <DetailItem label={IS_POLY ? 'LESCO reference' : 'FESCO reference'} value={FACTORY.fescoReference} />
             </dl>
           </CardBody>
         </Card>
@@ -85,7 +86,7 @@ export default function FactoryOverviewPage() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Weaving Halls" />
+          <CardHeader title={IS_POLY ? 'Production Sections' : 'Weaving Halls'} />
           <ul className="divide-y divide-line border-t border-line">
             {halls.map((h) => (
               <li key={h.hall} className="flex items-center gap-3 px-5 py-3.5">
@@ -94,7 +95,7 @@ export default function FactoryOverviewPage() {
                   <span className="block text-sm font-semibold text-slate-900">{h.hall}</span>
                   <span className="block text-xs text-slate-500">{h.types.join(' · ')}</span>
                 </span>
-                <span className="text-sm font-semibold text-slate-900 num">{h.count} looms</span>
+                <span className="text-sm font-semibold text-slate-900 num">{h.count} {TERMS.machines.toLowerCase()}</span>
               </li>
             ))}
           </ul>
@@ -106,7 +107,7 @@ export default function FactoryOverviewPage() {
               <li key={w} className="flex items-center gap-3 px-5 py-3.5">
                 <Warehouse className="size-5 text-slate-400" />
                 <span className="flex-1 text-sm font-medium text-slate-900">{w}</span>
-                <span className="text-xs text-slate-500">{w.startsWith('Yarn') ? 'Yarn store' : 'Finished fabric'}</span>
+                <span className="text-xs text-slate-500">{w.startsWith('Yarn') || w.startsWith('Granules') ? `${TERMS.raw} store` : IS_POLY ? 'Finished bags' : 'Finished fabric'}</span>
               </li>
             ))}
             <li className="flex items-center gap-3 px-5 py-3.5">

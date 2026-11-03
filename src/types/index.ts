@@ -1,6 +1,6 @@
 export type ShiftName = 'Morning' | 'Evening' | 'Night'
 export type LoomStatus = 'Running' | 'Idle' | 'Stopped' | 'Maintenance'
-export type LoomType = 'Air Jet' | 'Rapier' | 'Water Jet' | 'Projectile'
+export type LoomType = 'Air Jet' | 'Rapier' | 'Water Jet' | 'Projectile' | 'Extruder' | 'Circular Loom' | 'Printing' | 'Cutting & Sealing'
 
 export interface Loom {
   id: string // L-01
@@ -65,7 +65,7 @@ export interface YarnIssue {
   yarnName: string
   quantityKg: number
   issuedTo: string
-  purpose: 'Warp' | 'Weft'
+  purpose: 'Warp' | 'Weft' | 'Extrusion' | 'Printing' | 'Lamination' | 'Stitching'
   issuedBy: string
 }
 
@@ -104,6 +104,8 @@ export type DowntimeCategory =
   | 'Electrical'
   | 'Yarn Issue'
   | 'Beam Issue'
+  | 'Tape Issue'
+  | 'Print Issue'
   | 'Operator'
   | 'Maintenance'
   | 'Material Shortage'

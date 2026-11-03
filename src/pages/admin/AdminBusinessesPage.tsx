@@ -22,7 +22,7 @@ function Verified({ ok }: { ok?: boolean }) {
   return ok ? <BadgeCheck className="inline size-3.5 text-emerald-600" aria-label="verified" /> : <span className="text-[11px] text-slate-400">(not verified)</span>
 }
 
-/** PRD 2.7 — Businesses list for Weftex admins; never shows a business's factory data. */
+/** PRD 2.4 — Businesses list for Weftex admins; never shows a business's factory data. */
 export default function AdminBusinessesPage() {
   const { ready, db, admin, adminSignOut, setBusinessStatus } = useAccount()
   const navigate = useNavigate()

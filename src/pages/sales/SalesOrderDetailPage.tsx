@@ -7,6 +7,7 @@ import { DISPATCHES, SALES_ORDERS, customerById } from '@/data/commercial'
 import { fabricByCode } from '@/data/inventory'
 import { PRODUCTION_PLANS } from '@/data/production'
 import { cn, date, num, pkr } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 const FLOW: OrderStatus[] = ['Draft', 'Confirmed', 'Partially Fulfilled', 'Completed']
 
@@ -38,7 +39,7 @@ export default function SalesOrderDetailPage() {
     { label: 'Order created', date: o.date, done: true },
     { label: 'Confirmed by customer', date: o.date, done: step >= 1 },
     { label: 'In production', date: plan?.start ?? o.date, done: step >= 1 },
-    { label: `Partially dispatched${o.delivered ? ` · ${num(o.delivered)} m` : ''}`, date: dispatches[0]?.date, done: step >= 2 },
+    { label: `Partially dispatched${o.delivered ? ` · ${num(o.delivered)} ${TERMS.stock}` : ''}`, date: dispatches[0]?.date, done: step >= 2 },
     { label: 'Fully delivered', date: o.deliveryDate, done: step >= 3 },
   ]
 
@@ -80,7 +81,7 @@ export default function SalesOrderDetailPage() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50/70 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                   <tr>
-                    <th className="px-5 py-2.5 text-left">Fabric</th>
+                    <th className="px-5 py-2.5 text-left">{TERMS.productOne}</th>
                     <th className="px-4 py-2.5 text-right">Quantity</th>
                     <th className="px-4 py-2.5 text-right">Delivered</th>
                     <th className="px-4 py-2.5 text-right">Rate</th>
@@ -94,11 +95,11 @@ export default function SalesOrderDetailPage() {
                         {f.construction} {f.name}
                       </Link>
                       <p className="text-xs text-slate-500">
-                        {f.code} · {f.density} · {f.widthInches}" · {f.gsm} GSM
+                        {f.code} · {f.density}{IS_POLY ? ' mesh' : ''} · {f.widthInches}" · {f.gsm} GSM
                       </p>
                     </td>
-                    <td className="px-4 py-4 text-right num">{num(o.quantity)} m</td>
-                    <td className="px-4 py-4 text-right num">{num(o.delivered)} m</td>
+                    <td className="px-4 py-4 text-right num">{num(o.quantity)} {TERMS.stock}</td>
+                    <td className="px-4 py-4 text-right num">{num(o.delivered)} {TERMS.stock}</td>
                     <td className="px-4 py-4 text-right num">{pkr(o.rate)}</td>
                     <td className="px-5 py-4 text-right font-semibold text-slate-900 num">{pkr(subtotal)}</td>
                   </tr>
@@ -124,11 +125,11 @@ export default function SalesOrderDetailPage() {
           </Card>
 
           <Card>
-            <CardHeader title="Delivery" subtitle={`${num(o.quantity - o.delivered)} m remaining`} />
+            <CardHeader title="Delivery" subtitle={`${num(o.quantity - o.delivered)} ${TERMS.stock} remaining`} />
             <CardBody>
               <div className="flex items-baseline justify-between text-[13px] num">
                 <span className="text-slate-600">
-                  <b className="font-semibold text-slate-900">{num(o.delivered)} m</b> delivered of {num(o.quantity)} m
+                  <b className="font-semibold text-slate-900">{num(o.delivered)} {TERMS.stock}</b> delivered of {num(o.quantity)} {TERMS.stock}
                 </span>
                 <span className="font-semibold text-slate-900">{Math.round((o.delivered / o.quantity) * 100)}%</span>
               </div>
@@ -140,7 +141,7 @@ export default function SalesOrderDetailPage() {
                       <span className="font-semibold text-slate-900">{d.id}</span>
                       <span className="text-slate-500">{date(d.date)}</span>
                       <span className="text-slate-500 num">
-                        {d.rolls} rolls · {num(d.meters)} m
+                        {d.rolls} {TERMS.packs.toLowerCase()} · {num(d.meters)} {TERMS.stock}
                       </span>
                       <span className="text-slate-500">{d.vehicle}</span>
                       <StatusBadge status={d.status} />
@@ -156,7 +157,7 @@ export default function SalesOrderDetailPage() {
                   <Link to="/production/plans" className="font-semibold text-brand-700 hover:underline">
                     {plan.id}
                   </Link>{' '}
-                  on {plan.looms.join(', ')} — {num(plan.producedMeters)} of {num(plan.plannedMeters)} m woven.
+                  on {plan.looms.join(', ')} — {num(plan.producedMeters)} of {num(plan.plannedMeters)} {TERMS.stock} {IS_POLY ? 'made' : 'woven'}.
                 </p>
               )}
             </CardBody>

@@ -1,19 +1,19 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, Factory, Layers, Package, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BarChart3, Check, Factory, Layers, LayoutDashboard, Package, Sparkles, Spool, Timer, Truck } from 'lucide-react'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { Button, Field, Input, Select } from '@/components/ui'
 import { useAccount } from '@/context/Account'
-import { PRODUCT_UNITS, RAW_UNITS, TYPE_PROFILES, type BusinessType, type OnboardingDraft, type ProductUnit, type RawUnit } from '@/data/account'
+import { NAME_MAX, PRODUCT_UNITS, RAW_UNITS, TYPE_PROFILES, type BusinessType, type OnboardingDraft, type ProductUnit, type RawUnit } from '@/data/account'
 import { cn } from '@/utils/format'
 
-const STEPS = ['Business', 'Units', 'First factory'] as const
+const STEPS = ['Business', 'Names and units', 'First factory'] as const
 const CITIES = ['Faisalabad', 'Khurrianwala', 'Jaranwala', 'Lahore', 'Sheikhupura', 'Multan', 'Karachi']
 const TYPE_ICONS: Record<BusinessType, ReactNode> = { weaving: <Layers />, polybag: <Package />, other: <Sparkles /> }
 
 const EMPTY: OnboardingDraft = { step: 1, businessName: '', otherTypeName: '', factoryName: '', city: '' }
 
-/** PRD 2.5 — shown once after sign-up; progress is saved after each step. */
+/** PRD 2.2 — shown once after sign-up; progress is saved after each step. */
 export default function OnboardingPage() {
   const { ready, me, business, signOut, saveOnboarding, finishOnboarding } = useAccount()
   const navigate = useNavigate()
@@ -34,8 +34,8 @@ export default function OnboardingPage() {
 
   const pickType = (type: BusinessType) => {
     const p = TYPE_PROFILES[type]
-    // Units follow the type's defaults until the Owner picks their own.
-    change({ type, rawUnit: p.defaultRaw, productUnit: p.defaultProduct })
+    // Units and names follow the type's defaults until the Owner picks their own (2.2).
+    change({ type, rawUnit: p.defaultRaw, productUnit: p.defaultProduct, rawMaterialName: p.rawMaterial, finishedGoodsName: p.finishedGoods, machineName: p.machines })
   }
 
   const validate = () => {
@@ -47,6 +47,13 @@ export default function OnboardingPage() {
       if (d.type === 'other' && !d.otherTypeName.trim()) e.otherTypeName = 'Type of business is required'
     }
     if (d.step === 2) {
+      const name = (v: string | undefined, label: string, key: string) => {
+        if (!v?.trim()) e[key] = `${label} is required`
+        else if (v.trim().length > NAME_MAX) e[key] = `Use at most ${NAME_MAX} characters`
+      }
+      name(d.rawMaterialName, 'Raw material name', 'rawMaterialName')
+      name(d.finishedGoodsName, 'Finished product name', 'finishedGoodsName')
+      name(d.machineName, 'Machine name', 'machineName')
       if (!d.rawUnit) e.rawUnit = 'Raw material input unit is required'
       if (!d.productUnit) e.productUnit = 'Final product unit is required'
     }
@@ -98,7 +105,7 @@ export default function OnboardingPage() {
       <p className="text-[13px] font-medium text-brand-600">{editing ? 'Edit your details' : `Welcome, ${me.firstName}`}</p>
       <h1 className="mt-1 text-[24px] font-semibold text-slate-900">Set up your business</h1>
 
-      {/* Progress: 1 Business → 2 Units → 3 First factory */}
+      {/* Progress: 1 Business → 2 Names and units → 3 First factory */}
       <ol className="mt-6 flex items-center gap-2">
         {STEPS.map((label, i) => {
           const n = i + 1
@@ -164,11 +171,26 @@ export default function OnboardingPage() {
         {d.step === 2 && (
           <>
             <p className="text-[13.5px] text-slate-600">
-              How you count what comes in and what you make. {d.type && d.type !== 'other' && `We picked the usual units for ${TYPE_PROFILES[d.type].label.toLowerCase()}; change them if yours differ.`}
+              What you call things, and how you count what comes in and what you make.{' '}
+              {d.type && d.type !== 'other' && `We filled in the usual words and units for ${TYPE_PROFILES[d.type].label.toLowerCase()}; change them if yours differ.`}
             </p>
+            <div className="grid gap-5 sm:grid-cols-[1fr_190px]">
+              <div className="space-y-4">
+                <Field label="Raw material name" htmlFor="rawname" required error={errors.rawMaterialName} hint="e.g. Yarn, Granules, Dhaga">
+                  <Input id="rawname" maxLength={NAME_MAX} placeholder="e.g. Granules" value={d.rawMaterialName ?? ''} onChange={(e) => change({ rawMaterialName: e.target.value })} error={!!errors.rawMaterialName} />
+                </Field>
+                <Field label="Finished product name" htmlFor="fgname" required error={errors.finishedGoodsName} hint="e.g. Fabric, Bags">
+                  <Input id="fgname" maxLength={NAME_MAX} placeholder="e.g. Bags" value={d.finishedGoodsName ?? ''} onChange={(e) => change({ finishedGoodsName: e.target.value })} error={!!errors.finishedGoodsName} />
+                </Field>
+                <Field label="Machine name" htmlFor="mname" required error={errors.machineName} hint="e.g. Looms, Machines">
+                  <Input id="mname" maxLength={NAME_MAX} placeholder="e.g. Machines" value={d.machineName ?? ''} onChange={(e) => change({ machineName: e.target.value })} error={!!errors.machineName} />
+                </Field>
+              </div>
+              <SidebarPreview raw={d.rawMaterialName} product={d.finishedGoodsName} machines={d.machineName} />
+            </div>
             <UnitPicker label="Raw material input unit" hint={d.type === 'weaving' ? 'How yarn is counted' : 'How raw material is counted'} options={RAW_UNITS} value={d.rawUnit} onChange={(v) => change({ rawUnit: v as RawUnit })} error={errors.rawUnit} />
             <UnitPicker label="Final product unit" hint={d.type === 'weaving' ? 'How fabric is counted' : 'How finished goods are counted'} options={PRODUCT_UNITS} value={d.productUnit} onChange={(v) => change({ productUnit: v as ProductUnit })} error={errors.productUnit} />
-            <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-500">You can change the type and units later in Settings, until the first stock or production record is saved.</p>
+            <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-500">You can change the names any time in Settings. The type and units can change only until the first stock or production record is saved.</p>
           </>
         )}
 
@@ -232,5 +254,31 @@ function UnitPicker({ label, hint, options, value, onChange, error }: { label: s
         <Select aria-label={label} placeholder="Choose…" options={options} value={value ?? ''} onChange={(e) => onChange(e.target.value)} error={!!error} />
       </div>
     </Field>
+  )
+}
+
+/** A live preview of the sidebar, so the Owner sees their words as they type (2.2). */
+function SidebarPreview({ raw, product, machines }: { raw?: string; product?: string; machines?: string }) {
+  const items = [
+    { icon: <LayoutDashboard />, label: 'Dashboard' },
+    { icon: <Factory />, label: machines?.trim() || 'Machines' },
+    { icon: <Spool />, label: raw?.trim() || 'Raw material' },
+    { icon: <BarChart3 />, label: 'Production' },
+    { icon: <Timer />, label: 'Downtime' },
+    { icon: <Layers />, label: product?.trim() || 'Finished product' },
+    { icon: <Truck />, label: 'Sales' },
+  ]
+  return (
+    <div aria-label="Sidebar preview" className="rounded-xl bg-ink-900 p-3 text-white">
+      <p className="px-2 pb-2 text-[10.5px] font-semibold tracking-wide text-white/50 uppercase">Sidebar preview</p>
+      <ul className="space-y-0.5">
+        {items.map((it, i) => (
+          <li key={i} className="flex items-center gap-2 truncate rounded-md px-2 py-1.5 text-[12.5px] text-white/85 [&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:text-white/60">
+            {it.icon}
+            <span className="truncate">{it.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

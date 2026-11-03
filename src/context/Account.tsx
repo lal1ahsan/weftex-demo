@@ -1,15 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   MODULES,
-  TYPE_PROFILES,
   hashPassword,
   normalizePhone,
+  profileFor,
   seedDb,
+  seedPolyBusiness,
   seedRoles,
   uid,
   type Account,
   type Admin,
   type Business,
+  type BusinessNames,
   type BusinessStatus,
   type Db,
   type ModuleKey,
@@ -55,7 +57,7 @@ function readJson<T>(area: 'local' | 'session', key: string): T | null {
   }
 }
 
-/** Remember me keeps the session in localStorage (30 days); otherwise it ends with the browser (2.1). */
+/** Remember me keeps the session in localStorage (30 days); otherwise it ends with the browser (2.5). */
 function readSession(): string | null {
   const s = readJson<{ userId: string; expires: number }>('local', SESSION_KEY) ?? readJson<{ userId: string; expires: number }>('session', SESSION_KEY)
   return s && s.expires > Date.now() ? s.userId : null
@@ -122,6 +124,11 @@ interface AccountState {
 
 const Ctx = createContext<AccountState | null>(null)
 
+function namesFrom(o: OnboardingDraft): BusinessNames | undefined {
+  if (!o.rawMaterialName?.trim() || !o.finishedGoodsName?.trim() || !o.machineName?.trim()) return undefined
+  return { rawMaterial: o.rawMaterialName.trim(), finishedGoods: o.finishedGoodsName.trim(), machines: o.machineName.trim() }
+}
+
 export function AccountProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<Db | null>(() => readJson<Db>('local', DB_KEY))
   const [userId, setUserId] = useState<string | null>(readSession)
@@ -131,6 +138,19 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!db) seedDb().then(setDb)
+  }, [db])
+
+  // Browsers that saved the demo before the Poly bag demo business existed get it added once.
+  useEffect(() => {
+    if (!db || db.businesses.some((b) => b.id === 'biz-poly')) return
+    seedPolyBusiness().then((poly) =>
+      setDb((d) => {
+        if (!d || d.businesses.some((b) => b.id === 'biz-poly')) return d
+        const next = { ...d, businesses: [...d.businesses, poly.business], accounts: [...d.accounts, ...poly.accounts], roles: [...d.roles, ...poly.roles] }
+        store.set('local', DB_KEY, JSON.stringify(next))
+        return next
+      }),
+    )
   }, [db])
 
   const update = useCallback((fn: (d: Db) => Db) => {
@@ -161,7 +181,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const me = previewUser ?? realMe
   const business = db?.businesses.find((b) => b.id === me?.businessId)
   const role = db?.roles.find((r) => r.id === me?.roleId)
-  const profile = TYPE_PROFILES[business?.type ?? 'weaving']
+  const profile = profileFor(business)
   const isOwner = role?.systemKey === 'owner'
 
   const can = useCallback(
@@ -333,11 +353,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         const a = d.accounts.find((x) => x.id === userId)
         if (!a) return d
         a.onboarding = draft
-        // While pending, the Owner can still change the onboarding answers (2.7).
+        // While pending, the Owner can still change the onboarding answers (2.4).
         const b = d.businesses.find((x) => x.id === a.businessId)
         if (b && b.status !== 'Active' && draft.type) {
           const typeChanged = b.type !== draft.type
-          Object.assign(b, { name: draft.businessName.trim(), type: draft.type, otherTypeName: draft.otherTypeName.trim() || undefined, rawUnit: draft.rawUnit, productUnit: draft.productUnit })
+          Object.assign(b, { name: draft.businessName.trim(), type: draft.type, otherTypeName: draft.otherTypeName.trim() || undefined, rawUnit: draft.rawUnit, productUnit: draft.productUnit, names: namesFrom(draft) })
           b.factories[0] = { ...b.factories[0], name: draft.factoryName.trim(), city: draft.city }
           if (typeChanged) {
             const roles = seedRoles(b.id, draft.type)
@@ -366,6 +386,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         otherTypeName: o.type === 'other' ? o.otherTypeName.trim() : undefined,
         rawUnit: o.rawUnit,
         productUnit: o.productUnit,
+        names: namesFrom(o),
         status: 'Pending approval',
         ownerId: a.id,
         factories: [{ id: uid('fac'), name: o.factoryName.trim(), city: o.city }],

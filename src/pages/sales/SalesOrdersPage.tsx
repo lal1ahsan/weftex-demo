@@ -9,6 +9,7 @@ import { CUSTOMERS, SALES_ORDERS, customerById } from '@/data/commercial'
 import { FABRICS, fabricByCode } from '@/data/inventory'
 import { TODAY_ISO } from '@/data/seed'
 import { cn, date, num, pkr, pkrCompact, sum } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 type Filter = 'all' | OrderStatus
 
@@ -21,8 +22,8 @@ export default function SalesOrdersPage() {
   const columns: Column<SalesOrder>[] = [
     { key: 'id', header: 'Order #', cell: (o) => <span className="font-semibold text-slate-900">{o.id}</span>, sort: (o) => o.id },
     { key: 'customer', header: 'Customer', cell: (o) => customerById(o.customerId)?.name, sort: (o) => customerById(o.customerId)?.name ?? '' },
-    { key: 'fabric', header: 'Fabric', cell: (o) => `${fabricByCode(o.fabricCode)?.construction} ${fabricByCode(o.fabricCode)?.name}`, hideBelow: 'lg' },
-    { key: 'qty', header: 'Quantity', align: 'right', cell: (o) => `${num(o.quantity)} m`, sort: (o) => o.quantity },
+    { key: 'fabric', header: TERMS.productOne, cell: (o) => `${fabricByCode(o.fabricCode)?.construction} ${fabricByCode(o.fabricCode)?.name}`, hideBelow: 'lg' },
+    { key: 'qty', header: 'Quantity', align: 'right', cell: (o) => `${num(o.quantity)} ${TERMS.stock}`, sort: (o) => o.quantity },
     { key: 'rate', header: 'Rate', align: 'right', cell: (o) => pkr(o.rate), hideBelow: 'xl' },
     { key: 'total', header: 'Total', align: 'right', cell: (o) => <b className="font-semibold text-slate-900">{pkrCompact(o.quantity * o.rate, 2)}</b>, sort: (o) => o.quantity * o.rate },
     {
@@ -44,7 +45,7 @@ export default function SalesOrdersPage() {
     <div>
       <PageHeader
         title="Sales Orders"
-        description={`${SALES_ORDERS.length} orders · ${pkrCompact(sum(SALES_ORDERS.filter((o) => o.status !== 'Cancelled'), (o) => o.quantity * o.rate))} booked · ${num(sum(SALES_ORDERS, (o) => o.quantity - o.delivered))} m pending delivery`}
+        description={`${SALES_ORDERS.length} orders · ${pkrCompact(sum(SALES_ORDERS.filter((o) => o.status !== 'Cancelled'), (o) => o.quantity * o.rate))} booked · ${num(sum(SALES_ORDERS, (o) => o.quantity - o.delivered))} ${TERMS.stock} pending delivery`}
         breadcrumbs={[{ label: 'Sales' }, { label: 'Sales Orders' }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>
@@ -73,9 +74,9 @@ export default function SalesOrdersPage() {
         successMessage="Sales order SO-1032 created as Draft."
         fields={[
           { name: 'customer', label: 'Customer', type: 'select', options: CUSTOMERS.filter((c) => c.status === 'Active').map((c) => c.name), required: true, full: true },
-          { name: 'fabric', label: 'Fabric', type: 'select', options: FABRICS.map((f) => `${f.code} · ${f.construction} ${f.name}`), required: true, full: true },
-          { name: 'qty', label: 'Quantity', type: 'number', suffix: 'm', required: true },
-          { name: 'rate', label: 'Rate', type: 'number', suffix: 'PKR/m', required: true },
+          { name: 'fabric', label: TERMS.productOne, type: 'select', options: FABRICS.map((f) => `${f.code} · ${f.construction} ${f.name}`), required: true, full: true },
+          { name: 'qty', label: 'Quantity', type: 'number', suffix: TERMS.stock, required: true },
+          { name: 'rate', label: 'Rate', type: 'number', suffix: IS_POLY ? 'PKR/bag' : 'PKR/m', required: true },
           { name: 'delivery', label: 'Delivery date', type: 'date', required: true },
           { name: 'terms', label: 'Payment terms', type: 'select', options: ['Advance', '30 days credit', '45 days credit', '60 days credit'] },
           { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Packing, labelling, delivery address…' },

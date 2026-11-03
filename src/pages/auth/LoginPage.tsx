@@ -4,7 +4,7 @@ import { ArrowRight, BarChart3, Eye, EyeOff, Factory, Lock, ShieldCheck, Smartph
 import { Logo } from '@/components/brand/Logo'
 import { Button, Field, Input, useToast } from '@/components/ui'
 import { useAccount } from '@/context/Account'
-import { DEMO_OWNER, EMAIL_RE, normalizePhone } from '@/data/account'
+import { DEMO_OWNER, DEMO_POLY_OWNER, EMAIL_RE, normalizePhone } from '@/data/account'
 
 export default function LoginPage() {
   const { ready, me, signIn, landingFor } = useAccount()
@@ -42,9 +42,9 @@ export default function LoginPage() {
     navigate(landing === '/' && from && from !== '/login' ? from : landing, { replace: true })
   }
 
-  const fillDemo = () => {
-    setEmail(DEMO_OWNER.email)
-    setPassword(DEMO_OWNER.password)
+  const fillDemo = (demo: { email: string; password: string }) => {
+    setEmail(demo.email)
+    setPassword(demo.password)
     setErrors({})
   }
 
@@ -164,25 +164,32 @@ export default function LoginPage() {
               </p>
             </form>
 
-            <div className="mt-8 rounded-2xl border border-dashed border-brand-200 bg-brand-50/50 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[13px] font-semibold text-brand-800">Demo account · GH Weaving Mills</p>
-                  <dl className="mt-2 space-y-1 text-[13px] text-slate-600">
-                    <div className="flex gap-2">
-                      <dt className="w-16 text-slate-500">Email</dt>
-                      <dd className="font-mono font-medium text-slate-800">{DEMO_OWNER.email}</dd>
+            <div className="mt-8 space-y-3">
+              {[
+                { title: 'Demo account · GH Weaving Mills', demo: DEMO_OWNER },
+                { title: 'Demo account · Al-Noor Poly Pack (poly bags)', demo: DEMO_POLY_OWNER },
+              ].map(({ title, demo }) => (
+                <div key={demo.email} className="rounded-2xl border border-dashed border-brand-200 bg-brand-50/50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-brand-800">{title}</p>
+                      <dl className="mt-2 space-y-1 text-[13px] text-slate-600">
+                        <div className="flex gap-2">
+                          <dt className="w-16 shrink-0 text-slate-500">Email</dt>
+                          <dd className="truncate font-mono font-medium text-slate-800">{demo.email}</dd>
+                        </div>
+                        <div className="flex gap-2">
+                          <dt className="w-16 shrink-0 text-slate-500">Password</dt>
+                          <dd className="font-mono font-medium text-slate-800">{demo.password}</dd>
+                        </div>
+                      </dl>
                     </div>
-                    <div className="flex gap-2">
-                      <dt className="w-16 text-slate-500">Password</dt>
-                      <dd className="font-mono font-medium text-slate-800">{DEMO_OWNER.password}</dd>
-                    </div>
-                  </dl>
+                    <Button size="sm" variant="secondary" onClick={() => fillDemo(demo)}>
+                      Use demo
+                    </Button>
+                  </div>
                 </div>
-                <Button size="sm" variant="secondary" onClick={fillDemo}>
-                  Use demo
-                </Button>
-              </div>
+              ))}
             </div>
           </div>
         </div>

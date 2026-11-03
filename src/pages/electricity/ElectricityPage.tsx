@@ -9,6 +9,7 @@ import { ENERGY, MONTHLY_ENERGY, TARIFF } from '@/data/commercial'
 import { FACTORY } from '@/data/factory'
 import type { EnergyDay } from '@/types'
 import { compact, date, dayMonth, num, pct, pkr, pkrCompact, sum } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 const today = ENERGY[ENERGY.length - 1]
 
@@ -26,9 +27,9 @@ const HOURLY = (() => {
 })()
 
 const INVERTERS = [
-  { name: 'Inverter 1 · Roof Hall A', capacity: 250, today: 1190, status: 'Online' },
-  { name: 'Inverter 2 · Roof Hall B', capacity: 200, today: 960, status: 'Online' },
-  { name: 'Inverter 3 · Roof Hall C', capacity: 150, today: 700, status: 'Online' },
+  { name: `Inverter 1 · Roof ${TERMS.areas[0]}`, capacity: 250, today: 1190, status: 'Online' },
+  { name: `Inverter 2 · Roof ${TERMS.areas[1]}`, capacity: 200, today: 960, status: 'Online' },
+  { name: `Inverter 3 · Roof ${TERMS.areas[2]}`, capacity: 150, today: 700, status: 'Online' },
 ]
 
 export default function ElectricityPage() {
@@ -61,7 +62,7 @@ export default function ElectricityPage() {
     <div>
       <PageHeader
         title="Electricity & Solar"
-        description={`FESCO ref. ${FACTORY.fescoReference} · sanctioned load ${num(FACTORY.sanctionedLoadKw)} kW · ${FACTORY.solarCapacityKw} kW rooftop solar`}
+        description={`${IS_POLY ? 'LESCO' : 'FESCO'} ref. ${FACTORY.fescoReference} · sanctioned load ${num(FACTORY.sanctionedLoadKw)} kW · ${FACTORY.solarCapacityKw} kW rooftop solar`}
         breadcrumbs={[{ label: 'Electricity' }, { label: current === 'grid' ? 'Grid' : 'Solar' }]}
         actions={
           <Tabs

@@ -8,6 +8,7 @@ import { TableActions } from '@/components/common/TableActions'
 import { CUSTOMERS } from '@/data/commercial'
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { num, pkrCompact, sum } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 export default function CustomersPage() {
   const navigate = useNavigate()
@@ -57,7 +58,7 @@ export default function CustomersPage() {
     <div>
       <PageHeader
         title="Customers"
-        description="Buyers of your fabric, their orders and what they owe."
+        description={`Buyers of your ${TERMS.product.toLowerCase()}, their orders and what they owe.`}
         breadcrumbs={[{ label: 'Sales' }, { label: 'Customers' }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>

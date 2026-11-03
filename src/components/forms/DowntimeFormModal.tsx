@@ -6,6 +6,7 @@ import { DOWNTIME_CATEGORIES, DOWNTIME_DEPARTMENT, DOWNTIME_REASON_OPTIONS } fro
 import { TODAY_ISO } from '@/data/seed'
 import type { DowntimeCategory, ShiftName } from '@/types'
 import { duration } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 const empty = (loom = '') => ({ loomId: loom, date: TODAY_ISO, shift: 'Morning' as ShiftName, start: '', end: '', category: '' as DowntimeCategory | '', reason: '', remarks: '' })
 
@@ -38,7 +39,7 @@ export function DowntimeFormModal({ open, onClose, defaultLoom }: { open: boolea
 
   const save = () => {
     const e: Record<string, string> = {}
-    if (!v.loomId) e.loomId = 'Select a loom'
+    if (!v.loomId) e.loomId = `Select a ${TERMS.machine.toLowerCase()}`
     if (!v.date) e.date = 'Select a date'
     if (!v.start) e.start = 'Enter start time'
     if (!v.end) e.end = 'Enter end time'
@@ -74,7 +75,7 @@ export function DowntimeFormModal({ open, onClose, defaultLoom }: { open: boolea
       onClose={onClose}
       icon={<TimerOff />}
       title="Record Downtime"
-      description="Log a loom stoppage with its reason so breakdowns can be analysed."
+      description={`Log a ${TERMS.machine.toLowerCase()} stoppage with its reason so breakdowns can be analysed.`}
       size="lg"
       footer={
         <>
@@ -92,8 +93,8 @@ export function DowntimeFormModal({ open, onClose, defaultLoom }: { open: boolea
           save()
         }}
       >
-        <Field label="Loom" htmlFor="df-loom" required error={errors.loomId}>
-          <Select id="df-loom" placeholder="Select loom…" value={v.loomId} onChange={(e) => set('loomId', e.target.value)} error={!!errors.loomId} options={looms.map((l) => ({ value: l.id, label: `${l.id} · ${l.hall}` }))} />
+        <Field label={TERMS.machine} htmlFor="df-loom" required error={errors.loomId}>
+          <Select id="df-loom" placeholder={`Select ${TERMS.machine.toLowerCase()}…`} value={v.loomId} onChange={(e) => set('loomId', e.target.value)} error={!!errors.loomId} options={looms.map((l) => ({ value: l.id, label: `${l.id} · ${l.hall}` }))} />
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Date" htmlFor="df-date" required error={errors.date}>

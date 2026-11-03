@@ -8,6 +8,7 @@ import { TableActions } from '@/components/common/TableActions'
 import { DISPATCHES, SALES_ORDERS, customerById } from '@/data/commercial'
 import { fabricByCode } from '@/data/inventory'
 import { date, num, sum } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 export default function DispatchPage() {
   const navigate = useNavigate()
@@ -18,9 +19,9 @@ export default function DispatchPage() {
     { key: 'date', header: 'Date', cell: (d) => date(d.date), sort: (d) => d.date },
     { key: 'order', header: 'Order', cell: (d) => <span className="font-medium text-brand-700">{d.orderId}</span> },
     { key: 'customer', header: 'Customer', cell: (d) => customerById(d.customerId)?.name },
-    { key: 'fabric', header: 'Fabric', cell: (d) => fabricByCode(d.fabricCode)?.construction, hideBelow: 'lg' },
-    { key: 'rolls', header: 'Rolls', align: 'right', cell: (d) => d.rolls, hideBelow: 'md' },
-    { key: 'm', header: 'Meters', align: 'right', cell: (d) => num(d.meters), sort: (d) => d.meters },
+    { key: 'fabric', header: TERMS.productOne, cell: (d) => fabricByCode(d.fabricCode)?.construction, hideBelow: 'lg' },
+    { key: 'rolls', header: TERMS.packs, align: 'right', cell: (d) => d.rolls, hideBelow: 'md' },
+    { key: 'm', header: (TERMS.stockLong[0].toUpperCase() + TERMS.stockLong.slice(1)), align: 'right', cell: (d) => num(d.meters), sort: (d) => d.meters },
     { key: 'vehicle', header: 'Vehicle', cell: (d) => <span>{d.vehicle}<span className="block text-xs text-slate-400">{d.driver}</span></span>, hideBelow: 'xl' },
     { key: 'status', header: 'Status', cell: (d) => <StatusBadge status={d.status} />, sort: (d) => d.status },
   ]
@@ -29,7 +30,7 @@ export default function DispatchPage() {
     <div>
       <PageHeader
         title="Dispatch"
-        description="Delivery notes for fabric leaving the factory gate."
+        description={`Delivery notes for ${TERMS.product.toLowerCase()} leaving the factory gate.`}
         breadcrumbs={[{ label: 'Sales' }, { label: 'Dispatch' }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>
@@ -38,8 +39,8 @@ export default function DispatchPage() {
         }
       />
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Dispatched (14 days)" value={num(sum(DISPATCHES, (d) => d.meters))} unit="m" icon={<Truck />} />
-        <KpiCard label="Rolls Dispatched" value={num(sum(DISPATCHES, (d) => d.rolls))} icon={<Package />} accent="violet" />
+        <KpiCard label="Dispatched (14 days)" value={num(sum(DISPATCHES, (d) => d.meters))} unit={TERMS.stock} icon={<Truck />} />
+        <KpiCard label={`${TERMS.packs} Dispatched`} value={num(sum(DISPATCHES, (d) => d.rolls))} icon={<Package />} accent="violet" />
         <KpiCard label="In Transit / Loading" value={DISPATCHES.filter((d) => d.status !== 'Delivered').length} accent="amber" sub={<span>Vehicles on the road</span>} />
       </div>
       <DataTable
@@ -61,9 +62,9 @@ export default function DispatchPage() {
         successMessage="Delivery note DN-7741 created."
         fields={[
           { name: 'order', label: 'Sales order', type: 'select', options: SALES_ORDERS.filter((o) => o.status === 'Confirmed' || o.status === 'Partially Fulfilled').map((o) => `${o.id} · ${customerById(o.customerId)?.name}`), required: true, full: true },
-          { name: 'rolls', label: 'Number of rolls', type: 'number', required: true },
-          { name: 'meters', label: 'Meters', type: 'number', suffix: 'm', required: true },
-          { name: 'vehicle', label: 'Vehicle number', placeholder: 'FDA-1234', required: true },
+          { name: 'rolls', label: `Number of ${TERMS.packs.toLowerCase()}`, type: 'number', required: true },
+          { name: 'meters', label: (TERMS.stockLong[0].toUpperCase() + TERMS.stockLong.slice(1)), type: 'number', suffix: TERMS.stock, required: true },
+          { name: 'vehicle', label: 'Vehicle number', placeholder: IS_POLY ? 'LES-1234' : 'FDA-1234', required: true },
           { name: 'driver', label: 'Driver name', required: true },
           { name: 'bilty', label: 'Bilty / GR number' },
         ]}

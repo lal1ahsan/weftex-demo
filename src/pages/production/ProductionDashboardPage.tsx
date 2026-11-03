@@ -13,6 +13,7 @@ import { SHIFTS } from '@/data/factory'
 import { byShift, dailyTrend, loomStatusCounts, onDate, totals, YESTERDAY_ISO } from '@/data/metrics'
 import { TODAY_ISO } from '@/data/seed'
 import { compact, meters, num, pct } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 export default function ProductionDashboardPage() {
   const navigate = useNavigate()
@@ -51,7 +52,7 @@ export default function ProductionDashboardPage() {
       .slice(0, 8)
   }, [today])
 
-  const halls = ['Hall A', 'Hall B', 'Hall C'].map((hall) => {
+  const halls = TERMS.areas.map((hall) => {
     const ids = new Set(looms.filter((l) => l.hall === hall).map((l) => l.id))
     const tt = totals(today.filter((r) => ids.has(r.loomId)))
     return { hall, actual: tt.actual, target: tt.target }
@@ -60,7 +61,7 @@ export default function ProductionDashboardPage() {
   const columns: Column<ProductionRecord>[] = [
     {
       key: 'loom',
-      header: 'Loom',
+      header: TERMS.machine,
       cell: (r) => (
         <span className="flex items-center gap-2 font-semibold text-slate-900">
           {r.loomId}
@@ -71,7 +72,7 @@ export default function ProductionDashboardPage() {
     },
     { key: 'shift', header: 'Shift', cell: (r) => r.shift, sort: (r) => r.shift },
     { key: 'op', header: 'Operator', cell: (r) => r.operator, hideBelow: 'lg' },
-    { key: 'fabric', header: 'Fabric', cell: (r) => fabricByCode(r.fabricCode)?.construction, hideBelow: 'md' },
+    { key: 'fabric', header: TERMS.productOne, cell: (r) => fabricByCode(r.fabricCode)?.construction, hideBelow: 'md' },
     { key: 'target', header: 'Target', align: 'right', cell: (r) => meters(r.target), hideBelow: 'md' },
     { key: 'actual', header: 'Actual', align: 'right', cell: (r) => <b className="font-semibold text-slate-900">{meters(r.actual)}</b>, sort: (r) => r.actual },
     { key: 'eff', header: 'Efficiency', align: 'right', cell: (r) => <EfficiencyValue value={r.efficiency} />, sort: (r) => r.efficiency },
@@ -82,7 +83,7 @@ export default function ProductionDashboardPage() {
     <div>
       <PageHeader
         title="Production Dashboard"
-        description="Today's output across all halls, shifts and fabrics."
+        description={`Today's output across all ${TERMS.area.toLowerCase()}s, shifts and ${IS_POLY ? 'products' : 'fabrics'}.`}
         breadcrumbs={[{ label: 'Production' }, { label: 'Production Dashboard' }]}
         actions={
           <>
@@ -95,11 +96,11 @@ export default function ProductionDashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard label="Production Today" value={num(t.actual)} unit="m" icon={<Ruler />} delta={{ value: `${(((t.actual - y.actual) / y.actual) * 100).toFixed(1)}%`, direction: t.actual >= y.actual ? 'up' : 'down', good: t.actual >= y.actual, label: 'vs yesterday' }} />
-        <KpiCard label="Target" value={num(t.target)} unit="m" icon={<Target />} accent="slate" sub={<span>Gap {num(Math.max(0, t.target - t.actual))} m</span>} />
+        <KpiCard label="Production Today" value={num(t.actual)} unit={TERMS.out} icon={<Ruler />} delta={{ value: `${(((t.actual - y.actual) / y.actual) * 100).toFixed(1)}%`, direction: t.actual >= y.actual ? 'up' : 'down', good: t.actual >= y.actual, label: 'vs yesterday' }} />
+        <KpiCard label="Target" value={num(t.target)} unit={TERMS.out} icon={<Target />} accent="slate" sub={<span>Gap {num(Math.max(0, t.target - t.actual))} {TERMS.out}</span>} />
         <KpiCard label="Efficiency" value={pct(t.efficiency)} icon={<Gauge />} accent="green" delta={{ value: `${(t.efficiency - y.efficiency >= 0 ? '+' : '')}${(t.efficiency - y.efficiency).toFixed(1)}%`, direction: t.efficiency >= y.efficiency ? 'up' : 'down', good: t.efficiency >= y.efficiency, label: 'vs yesterday' }} />
-        <KpiCard label="Wastage" value={pct(t.wastagePct)} icon={<Recycle />} accent="amber" sub={<span>{num(t.wasteKg)} kg of {num(t.yarnKg)} kg yarn</span>} to="/production/wastage" />
-        <KpiCard label="Looms Running" value={`${status.Running}/${looms.length}`} icon={<Factory />} accent="teal" sub={<span>{status.Stopped} stopped · {status.Maintenance} maintenance</span>} to="/looms/status" />
+        <KpiCard label="Wastage" value={pct(t.wastagePct)} icon={<Recycle />} accent="amber" sub={<span>{num(t.wasteKg)} kg of {num(t.yarnKg)} kg {TERMS.raw.toLowerCase()}</span>} to="/production/wastage" />
+        <KpiCard label={`${TERMS.machines} Running`} value={`${status.Running}/${looms.length}`} icon={<Factory />} accent="teal" sub={<span>{status.Stopped} stopped · {status.Maintenance} maintenance</span>} to="/looms/status" />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
@@ -123,7 +124,7 @@ export default function ProductionDashboardPage() {
                 </div>
                 <div className="mt-2 flex items-baseline justify-between text-[13px] text-slate-500 num">
                   <span>
-                    <b className="font-display text-lg font-semibold text-slate-900">{num(s.actual)}</b> m
+                    <b className="font-display text-lg font-semibold text-slate-900">{num(s.actual)}</b> {TERMS.out}
                   </span>
                   <span>Supervisor: {SHIFTS[i].supervisor}</span>
                 </div>
@@ -135,7 +136,7 @@ export default function ProductionDashboardPage() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Production by Fabric" subtitle="Today · top 8 constructions" />
+          <CardHeader title={`Production by ${TERMS.productOne}`} subtitle={`Today · top 8 ${IS_POLY ? 'products' : 'constructions'}`} />
           <CardBody>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={byFabric} layout="vertical" margin={{ left: 8, right: 16 }} barCategoryGap="25%">
@@ -149,7 +150,7 @@ export default function ProductionDashboardPage() {
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Production by Hall" subtitle="Today · actual vs target" actions={<Legend items={[{ label: 'Actual', color: CHART.brand }, { label: 'Target', color: '#dfe6ff' }]} />} />
+          <CardHeader title={`Production by ${TERMS.area}`} subtitle="Today · actual vs target" actions={<Legend items={[{ label: 'Actual', color: CHART.brand }, { label: 'Target', color: '#dfe6ff' }]} />} />
           <CardBody>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={halls} margin={{ left: -8, right: 8 }} barGap={6}>
@@ -177,10 +178,10 @@ export default function ProductionDashboardPage() {
           columns={columns}
           rowKey={(r) => r.id}
           searchText={(r) => `${r.loomId} ${r.operator} ${r.fabricCode}`}
-          searchPlaceholder="Search loom or operator…"
+          searchPlaceholder={`Search ${TERMS.machine.toLowerCase()} or operator…`}
           filters={[
             { label: 'Shift', options: ['Morning', 'Evening', 'Night'], value: (r) => r.shift },
-            { label: 'Fabric', options: [...new Set(today.map((r) => r.fabricCode))].sort(), value: (r) => r.fabricCode },
+            { label: TERMS.productOne, options: [...new Set(today.map((r) => r.fabricCode))].sort(), value: (r) => r.fabricCode },
           ]}
           onRowClick={(r) => navigate(`/looms/${r.loomId}`)}
           rowClassName={(r) => (fresh.includes(r.id) ? 'bg-emerald-50/50' : undefined)}

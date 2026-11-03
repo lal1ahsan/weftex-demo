@@ -6,6 +6,7 @@ import { DOWNTIME_COLORS } from '@/components/charts/Charts'
 import { loomById } from '@/data/production'
 import { fabricByCode } from '@/data/inventory'
 import { date, duration, num } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 /** "View Breakdown" — full context for a single stoppage. */
 export function DowntimeDetailModal({ record, onClose }: { record: DowntimeRecord | null; onClose: () => void }) {
@@ -18,10 +19,10 @@ export function DowntimeDetailModal({ record, onClose }: { record: DowntimeRecor
   const fabric = loom ? fabricByCode(loom.fabricCode) : undefined
 
   const timeline = [
-    { time: record.start, title: 'Loom stopped', body: `${record.reason} — detected by ${record.category === 'Operator' ? 'supervisor' : 'loom sensor / operator'}` },
+    { time: record.start, title: `${TERMS.machine} stopped`, body: `${record.reason} — detected by ${record.category === 'Operator' ? 'supervisor' : `${TERMS.machine.toLowerCase()} sensor / operator`}` },
     { time: addMin(record.start, Math.min(6, record.minutes)), title: `${record.department} notified`, body: 'Alert sent to shift technician and supervisor' },
-    { time: addMin(record.start, Math.min(14, Math.round(record.minutes / 3))), title: 'Technician on loom', body: record.category === 'Material Shortage' ? 'Store asked to issue material' : 'Fault diagnosed, repair started' },
-    ...(ongoing ? [] : [{ time: record.end, title: 'Loom restarted', body: record.remarks }]),
+    { time: addMin(record.start, Math.min(14, Math.round(record.minutes / 3))), title: `Technician on ${TERMS.machine.toLowerCase()}`, body: record.category === 'Material Shortage' ? 'Store asked to issue material' : 'Fault diagnosed, repair started' },
+    ...(ongoing ? [] : [{ time: record.end, title: `${TERMS.machine} restarted`, body: record.remarks }]),
   ]
 
   return (
@@ -42,7 +43,7 @@ export function DowntimeDetailModal({ record, onClose }: { record: DowntimeRecor
               navigate(`/looms/${record.loomId}`)
             }}
           >
-            Open Loom {record.loomId}
+            Open {TERMS.machine} {record.loomId}
           </Button>
         </>
       }
@@ -62,11 +63,11 @@ export function DowntimeDetailModal({ record, onClose }: { record: DowntimeRecor
         <DetailItem label="Duration" value={duration(record.minutes)} />
         <DetailItem label="Start" value={record.start} />
         <DetailItem label="End" value={record.end || 'Still stopped'} />
-        <DetailItem label="Est. meters lost" value={`${num(metersLost)} m`} />
+        <DetailItem label={`Est. ${TERMS.outLong} lost`} value={`${num(metersLost)} ${TERMS.out}`} />
         <DetailItem label="Responsible" value={record.department} />
-        <DetailItem label="Loom" value={loom ? `${loom.manufacturer} ${loom.model}` : record.loomId} />
-        <DetailItem label="Fabric" value={fabric ? `${fabric.construction} ${fabric.name}` : '—'} />
-        <DetailItem label="Hall" value={loom?.hall ?? '—'} />
+        <DetailItem label={TERMS.machine} value={loom ? `${loom.manufacturer} ${loom.model}` : record.loomId} />
+        <DetailItem label={TERMS.productOne} value={fabric ? `${fabric.construction} ${fabric.name}` : '—'} />
+        <DetailItem label={TERMS.area} value={loom?.hall ?? '—'} />
       </dl>
 
       <p className="mt-6 mb-3 text-[13px] font-semibold text-slate-900">Timeline</p>

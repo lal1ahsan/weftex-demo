@@ -7,6 +7,7 @@ import { byShift, onDate } from '@/data/metrics'
 import { TODAY_ISO } from '@/data/seed'
 import type { Operator, ShiftName } from '@/types'
 import { num } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 export default function ShiftsPage() {
   const toast = useToast()
@@ -62,7 +63,7 @@ export default function ShiftsPage() {
                 <p className="text-sm font-semibold text-slate-900">{s.supervisor}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate-500">Today · {num(perf[i].actual)} m</p>
+                <p className="text-xs text-slate-500">Today · {num(perf[i].actual)} {TERMS.out}</p>
                 <EfficiencyValue value={perf[i].efficiency} className="text-lg" />
               </div>
             </div>

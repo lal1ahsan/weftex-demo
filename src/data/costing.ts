@@ -38,6 +38,20 @@ export function costPerMeter(f: FabricCostInput): CostBreakdown {
   return { yarnKgPerM, yarn, sizing, labour, electricity, maintenance, overhead, total: r2(yarn + sizing + labour + electricity + maintenance + overhead) }
 }
 
+/** Poly bags: cost of one kg of finished bags — granules plus each stage's conversion cost (PKR/kg). */
+export const POLY_WASTAGE_ALLOWANCE = 0.031
+
+export function polyCostPerKg(granuleRate: number) {
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  const granules = r2(granuleRate * (1 + POLY_WASTAGE_ALLOWANCE))
+  const extrusion = 38
+  const weaving = 34
+  const printing = 22
+  const conversion = 18
+  const overhead = 26
+  return { granules, extrusion, weaving, printing, conversion, overhead, total: r2(granules + extrusion + weaving + printing + conversion + overhead) }
+}
+
 /** Default scenario for the cost calculator — the founder's reference example. */
 export const EXAMPLE_BATCH = {
   label: 'Example batch · 20,000 m',

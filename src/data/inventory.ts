@@ -1,11 +1,15 @@
 import type { Fabric, Supplier, YarnIssue, YarnItem, YarnPurchase } from '@/types'
 import { costPerMeter } from './costing'
+import { IS_POLY } from './dataset'
 import { createRng, daysAgo, isoDate, roundTo } from './seed'
 
 const rng = createRng(4021)
 
 // ---------------------------------------------------------------- Suppliers
-export const SUPPLIERS: Supplier[] = [
+/** The supplier category that holds raw material: yarn mills, or granule importers. */
+export const RAW_CATEGORY = IS_POLY ? 'Granules' : 'Yarn'
+
+const WEAVING_SUPPLIERS: [string, string, string, string][] = [
   ['ABC Textiles', 'Faisalabad', 'Rana Shahid', 'Yarn'],
   ['Chenab Spinning Mills', 'Faisalabad', 'Malik Ashraf', 'Yarn'],
   ['Ravi Yarn Traders', 'Lahore', 'Sheikh Naveed', 'Yarn'],
@@ -21,14 +25,34 @@ export const SUPPLIERS: Supplier[] = [
   ['Star Packaging Industries', 'Lahore', 'Imran Butt', 'Packaging'],
   ['Madina Lubricants', 'Faisalabad', 'Qari Saleem', 'Consumables'],
   ['Crescent Electric Services', 'Faisalabad', 'Engr. Waseem', 'Electrical'],
-].map(([name, city, contact, category], i) => ({
+]
+
+const POLY_SUPPLIERS: [string, string, string, string][] = [
+  ['Lotte Chemical Pakistan', 'Karachi', 'Faisal Siddiqui', 'Granules'],
+  ['Sabic Polymers (Distributor)', 'Lahore', 'Kashif Rana', 'Granules'],
+  ['Engro Polymer Traders', 'Karachi', 'Asif Memon', 'Granules'],
+  ['Shah Polymers', 'Lahore', 'Shah Nawaz', 'Granules'],
+  ['Pak Petrochem Traders', 'Karachi', 'Zubair Patel', 'Granules'],
+  ['Punjab Filler Industries', 'Faisalabad', 'Ch. Mukhtar', 'Masterbatch'],
+  ['Colour Tech Masterbatch', 'Lahore', 'Hassan Javed', 'Masterbatch'],
+  ['Green Recycled Plastics', 'Lahore', 'Rafiq Butt', 'Granules'],
+  ['Packages Film Division', 'Lahore', 'Omer Saeed', 'Film'],
+  ['Siegwerk Inks Pakistan', 'Lahore', 'Adeel Mirza', 'Ink'],
+  ['Al-Fatah Threads', 'Faisalabad', 'Haji Fateh', 'Thread'],
+  ['Lohia Spares Pakistan', 'Lahore', 'Rahul Kumar', 'Spare Parts'],
+  ['Star Packaging Industries', 'Lahore', 'Imran Butt', 'Packaging'],
+  ['Madina Lubricants', 'Lahore', 'Qari Saleem', 'Consumables'],
+  ['Crescent Electric Services', 'Lahore', 'Engr. Waseem', 'Electrical'],
+]
+
+export const SUPPLIERS: Supplier[] = (IS_POLY ? POLY_SUPPLIERS : WEAVING_SUPPLIERS).map(([name, city, contact, category], i) => ({
   id: `SUP-${String(i + 1).padStart(3, '0')}`,
   name,
   city,
   contact,
   phone: `03${rng.int(0, 4)}${rng.int(0, 9)} ${rng.int(1000, 9999)} ${rng.int(100, 999)}`,
   category,
-  payable: category === 'Yarn' ? roundTo(rng.int(400, 4200) * 1000, 5000) : roundTo(rng.int(20, 380) * 1000, 500),
+  payable: category === RAW_CATEGORY ? roundTo(rng.int(400, 4200) * 1000, 5000) : roundTo(rng.int(20, 380) * 1000, 500),
   rating: Math.round(rng.float(3.4, 4.9) * 10) / 10,
   status: i === 9 ? 'Inactive' : 'Active',
 }))
@@ -36,7 +60,7 @@ export const SUPPLIERS: Supplier[] = [
 // ---------------------------------------------------------------- Yarn
 type YarnSeed = [name: string, count: string, type: string, material: string, supplierIdx: number, cost: number, kg: number, min: number]
 
-const YARN_SEEDS: YarnSeed[] = [
+const WEAVING_YARN_SEEDS: YarnSeed[] = [
   ['Cotton Yarn', '40s', 'Combed', 'Cotton', 0, 620, 12500, 4000],
   ['Cotton Yarn', '52s', 'Combed', 'Cotton', 1, 690, 6400, 2500],
   ['Cotton Yarn', '80s', 'Compact Combed', 'Cotton', 1, 980, 2900, 1200],
@@ -69,11 +93,40 @@ const YARN_SEEDS: YarnSeed[] = [
   ['Cotton Yarn', '45s', 'Combed', 'Cotton', 7, 645, 3500, 1500],
 ]
 
-// Calibrate stock value to the dashboard figure (≈ PKR 25.4M); YRN-001 and YRN-004 are story items and stay fixed.
+/** Poly bag raw materials: name, grade, form, material, supplier, PKR/kg, kg in stock, minimum kg. */
+const POLY_YARN_SEEDS: YarnSeed[] = [
+  ['PP Homopolymer', 'H030SG', 'Virgin', 'PP', 0, 395, 18500, 6000],
+  ['PP Homopolymer', 'HP522H', 'Virgin', 'PP', 1, 410, 9200, 4000],
+  ['PP Raffia', 'Y130', 'Virgin', 'PP', 2, 388, 7400, 3000],
+  ['PP Recycled', 'Grade A', 'Recycled', 'PP', 7, 245, 2100, 3000],
+  ['LDPE', 'LD 2420H', 'Virgin', 'LDPE', 3, 455, 3600, 1500],
+  ['LLDPE', '218W', 'Virgin', 'LLDPE', 3, 440, 2400, 1000],
+  ['HDPE', 'F00952', 'Virgin', 'HDPE', 4, 430, 1800, 800],
+  ['Calcium Filler Masterbatch', 'CaCO3 75%', 'Masterbatch', 'Filler', 5, 120, 6500, 2500],
+  ['White Masterbatch', 'TiO2 60%', 'Masterbatch', 'Colour', 6, 620, 950, 400],
+  ['Green Masterbatch', 'G-204', 'Masterbatch', 'Colour', 6, 580, 380, 200],
+  ['Blue Masterbatch', 'B-118', 'Masterbatch', 'Colour', 6, 590, 0, 150],
+  ['UV Stabiliser Masterbatch', 'UV-8', 'Masterbatch', 'Additive', 6, 980, 260, 120],
+  ['Anti-slip Masterbatch', 'AS-2', 'Masterbatch', 'Additive', 6, 760, 140, 100],
+  ['Lamination LDPE', 'LD 7011', 'Virgin', 'LDPE', 3, 470, 2200, 900],
+  ['BOPP Film', '20 micron', 'Film', 'BOPP', 8, 520, 1600, 700],
+  ['Printing Ink — Blue', 'Flexo', 'Ink', 'Ink', 9, 1150, 180, 80],
+  ['Printing Ink — Red', 'Flexo', 'Ink', 'Ink', 9, 1150, 120, 80],
+  ['Printing Ink — Green', 'Flexo', 'Ink', 'Ink', 9, 1180, 95, 60],
+  ['Printing Ink — Black', 'Flexo', 'Ink', 'Ink', 9, 1090, 210, 80],
+  ['Solvent (Toluene)', 'Industrial', 'Liquid', 'Solvent', 9, 340, 450, 200],
+  ['Sewing Thread', 'Polyester 20/6', 'Cone', 'Thread', 10, 900, 320, 150],
+  ['LDPE Liner Film', '40 micron', 'Film', 'LDPE', 3, 480, 1300, 600],
+]
+
+const YARN_SEEDS = IS_POLY ? POLY_YARN_SEEDS : WEAVING_YARN_SEEDS
+
+// Calibrate stock value to the dashboard figure (≈ PKR 25.4M weaving, 14.8M poly bags); items 001 and 004 are story items and stay fixed.
 const FIXED_YARN = [0, 3]
 const fixedYarnValue = FIXED_YARN.reduce((s, i) => s + YARN_SEEDS[i][5] * YARN_SEEDS[i][6], 0)
 const otherYarnValue = YARN_SEEDS.reduce((s, y, i) => (FIXED_YARN.includes(i) ? s : s + y[5] * y[6]), 0)
-const yarnScale = (25_400_000 - fixedYarnValue) / otherYarnValue
+export const RAW_STOCK_VALUE = IS_POLY ? 14_800_000 : 25_400_000
+const yarnScale = (RAW_STOCK_VALUE - fixedYarnValue) / otherYarnValue
 
 export const YARNS: YarnItem[] = YARN_SEEDS.map(([name, count, type, material, s, cost, rawKg, rawMin], i) => {
   const fixed = FIXED_YARN.includes(i)
@@ -90,7 +143,7 @@ export const YARNS: YarnItem[] = YARN_SEEDS.map(([name, count, type, material, s
     stockKg: kg,
     minStockKg: min,
     costPerKg: cost,
-    warehouse: i % 3 === 0 ? 'Yarn Store 2' : 'Yarn Store 1',
+    warehouse: IS_POLY ? (i % 3 === 0 ? 'Granules Store 2' : 'Granules Store 1') : i % 3 === 0 ? 'Yarn Store 2' : 'Yarn Store 1',
     incomingKg: rng.next() > 0.6 ? roundTo(rng.int(800, 6000), 100) : 0,
     issuedKgMonth: roundTo(rng.int(600, 9000), 50),
   }
@@ -120,6 +173,20 @@ export const YARN_PURCHASES: YarnPurchase[] = Array.from({ length: 28 }, (_, i) 
 const ISSUERS = ['Naeem Akhtar', 'Shabbir Hussain']
 export const YARN_ISSUES: YarnIssue[] = Array.from({ length: 36 }, (_, i) => {
   const y = rng.pick(YARNS.slice(0, 22))
+  if (IS_POLY) {
+    const stage = y.material === 'Ink' || y.material === 'Solvent' ? 'Printing' : y.material === 'Thread' ? 'Stitching' : y.name.startsWith('Lamination') || y.material === 'BOPP' ? 'Lamination' : 'Extrusion'
+    const machine = stage === 'Extrusion' ? rng.int(1, 6) : stage === 'Printing' ? rng.int(43, 46) : rng.int(47, 52)
+    return {
+      id: `YI-${5880 - i}`,
+      date: isoDate(daysAgo(Math.floor(i / 3))),
+      yarnCode: y.code,
+      yarnName: `${y.name} ${y.count}`,
+      quantityKg: roundTo(stage === 'Extrusion' ? rng.int(400, 2400) : rng.int(20, 180), 10),
+      issuedTo: `${stage} — M-${String(machine).padStart(2, '0')}`,
+      purpose: stage,
+      issuedBy: rng.pick(['Arif Hussain', 'Zafar Iqbal']),
+    }
+  }
   return {
     id: `YI-${5880 - i}`,
     date: isoDate(daysAgo(Math.floor(i / 3))),
@@ -135,7 +202,7 @@ export const YARN_ISSUES: YarnIssue[] = Array.from({ length: 36 }, (_, i) => {
 // ---------------------------------------------------------------- Fabric
 type FabricSeed = [name: string, construction: string, density: string, width: number, gsm: number, weave: string, yarnRate: number]
 
-const FABRIC_SEEDS: FabricSeed[] = [
+const WEAVING_FABRIC_SEEDS: FabricSeed[] = [
   ['Cotton Sheeting', '40×40', '133×72', 63, 118, 'Plain', 600],
   ['Fine Poplin', '52×52', '144×88', 58, 98, 'Plain', 690],
   ['Premium Lawn', '80×80', '92×88', 52, 72, 'Plain', 980],
@@ -158,10 +225,70 @@ const FABRIC_SEEDS: FabricSeed[] = [
   ['Linen Blend', '40×40', '76×68', 58, 150, 'Plain', 1000],
 ]
 
+/** Poly bag products: name, size (width × length), mesh, width, GSM, finish, PKR/kg of granules. */
+const POLY_FABRIC_SEEDS: FabricSeed[] = [
+  ['PP Woven Sack 50 kg — Flour', '22×36"', '10×10', 22, 72, 'Plain · 2-colour print', 400],
+  ['PP Woven Sack 25 kg — Rice', '18×28"', '10×10', 18, 65, 'Plain · 3-colour print', 400],
+  ['PP Woven Sack 50 kg — Sugar', '22×38"', '10×10', 22, 78, 'Liner · 1-colour print', 405],
+  ['Cement Bag 50 kg', '20×30"', '12×12', 20, 80, 'Laminated · 2-colour print', 420],
+  ['Fertiliser Bag 50 kg', '23×40"', '10×10', 23, 90, 'Liner · UV · 2-colour print', 415],
+  ['BOPP Bag 10 kg — Rice', '14×22"', '12×12', 14, 70, 'BOPP · 8-colour print', 520],
+  ['BOPP Bag 25 kg — Atta', '18×30"', '12×12', 18, 75, 'BOPP · 8-colour print', 520],
+  ['PP Woven Sack 40 kg — Feed', '21×35"', '10×10', 21, 70, 'Plain · 1-colour print', 395],
+  ['Leno Mesh Bag — Onion', '20×32"', 'Leno', 20, 40, 'Leno · drawstring', 410],
+  ['Leno Mesh Bag — Potato', '22×36"', 'Leno', 22, 45, 'Leno · drawstring', 410],
+  ['Jumbo Bag 1 ton (FIBC)', '36×42"', '14×14', 36, 180, 'Coated · 4 loops', 430],
+  ['Grain Storage Sack 100 kg', '28×44"', '10×10', 28, 95, 'Plain · UV', 400],
+  ['Seed Bag 20 kg', '16×26"', '12×12', 16, 68, 'Laminated · 4-colour print', 425],
+  ['Chemical Bag 25 kg', '18×30"', '12×12', 18, 85, 'Liner · laminated', 430],
+  ['Sand & Gravel Sack', '18×30"', '8×8', 18, 60, 'Plain · unprinted', 330],
+  ['Wool Pack Bag', '40×60"', '10×10', 40, 110, 'Plain · UV', 400],
+]
+
+const FABRIC_SEEDS = IS_POLY ? POLY_FABRIC_SEEDS : WEAVING_FABRIC_SEEDS
+
+/** One bag's weight in kg: both faces of a width × length tube at the fabric's GSM. */
+export function bagKg(f: Pick<Fabric, 'construction' | 'widthInches' | 'gsm'>) {
+  const length = Number(f.construction.replace('"', '').split('×')[1]) || f.widthInches * 1.6
+  return (f.widthInches * 0.0254) * (length * 0.0254) * 2 * (f.gsm / 1000)
+}
+
+/** Weight of one unit of finished stock: a meter of fabric, or one bag. */
+export function unitKg(f: Pick<Fabric, 'construction' | 'widthInches' | 'gsm'>) {
+  return IS_POLY ? bagKg(f) : f.widthInches * 0.0254 * (f.gsm / 1000)
+}
+
+/** Bags per bundle; jumbo bags are packed 20 to a bundle. */
+const bundleSize = (f: Pick<Fabric, 'widthInches'>) => (f.widthInches >= 36 ? 20 : 500)
+/** Units in one pack: ~122 m in a roll of fabric, or the bags in one bundle. */
+export const packSize = (f: Pick<Fabric, 'widthInches'>) => (IS_POLY ? bundleSize(f) : 122)
+
 /** Blended yarn rate per fabric (PKR/kg) — used by costing. */
-export const FABRIC_YARN_RATE: Record<string, number> = Object.fromEntries(FABRIC_SEEDS.map((f, i) => [`FAB-${101 + i}`, f[6]]))
+export const FABRIC_YARN_RATE: Record<string, number> = Object.fromEntries(FABRIC_SEEDS.map((f, i) => [`${IS_POLY ? 'BAG' : 'FAB'}-${101 + i}`, f[6]]))
 
 const fabricBase: Fabric[] = FABRIC_SEEDS.map(([name, construction, density, width, gsm, weave, yarnRate], i) => {
+  if (IS_POLY) {
+    // Selling rate per bag = granules in the bag plus extrusion, weaving, printing and conversion, plus margin
+    const kg = bagKg({ construction, widthInches: width, gsm })
+    const rate = Math.round(kg * yarnRate * rng.float(1.42, 1.62) + (weave.includes('BOPP') ? 9 : weave.includes('print') ? 4 : 2))
+    const bundles = rng.int(8, 60)
+    const bags = bundles * bundleSize({ widthInches: width })
+    return {
+      code: `BAG-${101 + i}`,
+      name,
+      construction,
+      density,
+      widthInches: width,
+      gsm,
+      weave,
+      rolls: bundles,
+      meters: bags,
+      weightKg: Math.round(bags * kg),
+      location: i % 3 === 2 ? 'Bundle Store' : 'Finished Goods Store',
+      status: i === 8 || i === 14 ? 'On Hold' : i % 4 === 1 ? 'Reserved' : 'Available',
+      ratePerMeter: rate,
+    }
+  }
   // Selling rate = cost per meter plus a 9–17% margin
   const rate = Math.round(costPerMeter({ widthInches: width, gsm, density, yarnRate }).total * rng.float(1.09, 1.17))
   const rolls = rng.int(6, 70)
@@ -183,13 +310,15 @@ const fabricBase: Fabric[] = FABRIC_SEEDS.map(([name, construction, density, wid
   }
 })
 
-// Calibrate stock value to the dashboard figure (≈ PKR 31.2M).
+// Calibrate stock value to the dashboard figure (≈ PKR 31.2M weaving, 12.6M poly bags).
+export const FINISHED_STOCK_VALUE = IS_POLY ? 12_600_000 : 31_200_000
 const rawFabricValue = fabricBase.reduce((s, f) => s + f.meters * f.ratePerMeter, 0)
-const fabricScale = 31_200_000 / rawFabricValue
+const fabricScale = FINISHED_STOCK_VALUE / rawFabricValue
 export const FABRICS: Fabric[] = fabricBase.map((f) => {
-  const meters = roundTo(f.meters * fabricScale, 5)
-  const rolls = Math.max(1, Math.round(meters / 122))
-  return { ...f, meters, rolls, weightKg: Math.round(meters * f.widthInches * 0.0254 * (f.gsm / 1000)) }
+  const size = packSize(f)
+  const meters = IS_POLY ? Math.max(1, Math.round((f.meters * fabricScale) / size)) * size : roundTo(f.meters * fabricScale, 5)
+  const rolls = Math.max(1, Math.round(meters / size))
+  return { ...f, meters, rolls, weightKg: Math.round(meters * unitKg(f)) }
 })
 
 export const fabricByCode = (code: string) => FABRICS.find((f) => f.code === code)

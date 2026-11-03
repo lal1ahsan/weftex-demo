@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, Lock, MailWarning } from 'lucide-react'
 import { useAccount } from '@/context/Account'
 import { moduleForPath } from '@/data/account'
+import { DATASET, LOADED_NAMES, datasetFor } from '@/data/dataset'
 import { Button, EmptyState, useToast } from '@/components/ui'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { cn } from '@/utils/format'
@@ -10,6 +11,15 @@ import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
 const COLLAPSE_KEY = 'ghw-sidebar-collapsed'
+const RELOAD_KEY = 'weftex-reloaded-for'
+
+function reloadedFor(wanted: string) {
+  try {
+    return sessionStorage.getItem(RELOAD_KEY) === wanted
+  } catch {
+    return true
+  }
+}
 
 export function AppLayout() {
   const { ready, me, business, role, isOwner, can, landingFor, previewedBy, previewAs, verifyEmail } = useAccount()
@@ -39,7 +49,31 @@ export function AppLayout() {
     window.scrollTo(0, 0)
   }, [pathname])
 
-  if (!ready) return <PageLoader />
+  // The screens' data and words were built when the app loaded; a different business type
+  // (or new names from Settings) needs a fresh load to show its own.
+  const wanted = business ? `${datasetFor(business.type)}|${JSON.stringify(business.names ?? null)}` : ''
+  const matches = !business || wanted === `${DATASET}|${JSON.stringify(LOADED_NAMES ?? null)}`
+  const stale = !matches && !reloadedFor(wanted)
+  useEffect(() => {
+    if (matches) {
+      try {
+        sessionStorage.removeItem(RELOAD_KEY)
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+    if (!stale) return
+    try {
+      // Reload once per change; if storage is blocked the data can't follow, so don't loop.
+      sessionStorage.setItem(RELOAD_KEY, wanted)
+    } catch {
+      return
+    }
+    window.location.reload()
+  }, [matches, stale, wanted])
+
+  if (!ready || stale) return <PageLoader />
   if (!me) return <Navigate to="/login" replace state={{ from: pathname }} />
   const landing = landingFor(me)
   if (['/signup/verify', '/onboarding', '/pending'].includes(landing)) return <Navigate to={landing} replace />

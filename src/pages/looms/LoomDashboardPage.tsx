@@ -9,13 +9,14 @@ import { useApp } from '@/context/AppState'
 import { fabricByCode } from '@/data/inventory'
 import { loomStatusCounts } from '@/data/metrics'
 import { cn, duration, num, pct, sum } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 const STATUSES: LoomStatus[] = ['Running', 'Idle', 'Stopped', 'Maintenance']
 
 export default function LoomDashboardPage() {
   const navigate = useNavigate()
   const { looms } = useApp()
-  const [hall, setHall] = useState<'all' | 'Hall A' | 'Hall B' | 'Hall C'>('all')
+  const [hall, setHall] = useState<string>('all')
   const [status, setStatus] = useState<LoomStatus | null>(null)
   const [view, setView] = useState<'grid' | 'table'>('grid')
   const [sortBy, setSortBy] = useState<'id' | 'eff'>('id')
@@ -33,13 +34,13 @@ export default function LoomDashboardPage() {
   }, [looms, hall, status, sortBy, q])
 
   const columns: Column<Loom>[] = [
-    { key: 'id', header: 'Loom', cell: (l) => <span className="font-semibold text-slate-900">{l.id}</span>, sort: (l) => l.id },
+    { key: 'id', header: TERMS.machine, cell: (l) => <span className="font-semibold text-slate-900">{l.id}</span>, sort: (l) => l.id },
     { key: 'status', header: 'Status', cell: (l) => <StatusBadge status={l.status} />, sort: (l) => l.status },
-    { key: 'fabric', header: 'Fabric', cell: (l) => <span>{fabricByCode(l.fabricCode)?.construction} <span className="text-slate-400">· {fabricByCode(l.fabricCode)?.name}</span></span> },
-    { key: 'hall', header: 'Hall', cell: (l) => l.hall, hideBelow: 'lg' },
+    { key: 'fabric', header: TERMS.productOne, cell: (l) => <span>{fabricByCode(l.fabricCode)?.construction} <span className="text-slate-400">· {fabricByCode(l.fabricCode)?.name}</span></span> },
+    { key: 'hall', header: TERMS.area, cell: (l) => l.hall, hideBelow: 'lg' },
     { key: 'operator', header: 'Operator', cell: (l) => l.operator, hideBelow: 'xl' },
-    { key: 'prod', header: 'Production', align: 'right', cell: (l) => `${num(l.todayProduction)} m`, sort: (l) => l.todayProduction },
-    { key: 'target', header: 'Target', align: 'right', cell: (l) => `${num(l.target)} m`, sort: (l) => l.target, hideBelow: 'md' },
+    { key: 'prod', header: 'Production', align: 'right', cell: (l) => `${num(l.todayProduction)} ${TERMS.out}`, sort: (l) => l.todayProduction },
+    { key: 'target', header: 'Target', align: 'right', cell: (l) => `${num(l.target)} ${TERMS.out}`, sort: (l) => l.target, hideBelow: 'md' },
     { key: 'eff', header: 'Efficiency', align: 'right', cell: (l) => <EfficiencyValue value={l.efficiency} />, sort: (l) => l.efficiency },
     { key: 'dt', header: 'Downtime', align: 'right', cell: (l) => (l.downtimeMinutes ? duration(l.downtimeMinutes) : <span className="text-slate-300">—</span>), sort: (l) => l.downtimeMinutes, hideBelow: 'md' },
   ]
@@ -47,9 +48,9 @@ export default function LoomDashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Loom Dashboard"
-        description="Live status and today's output for every loom on the floor."
-        breadcrumbs={[{ label: 'Looms' }, { label: 'Loom Dashboard' }]}
+        title={`${TERMS.machine} Dashboard`}
+        description={`Live status and today's output for every ${TERMS.machine.toLowerCase()} on the floor.`}
+        breadcrumbs={[{ label: TERMS.machines }, { label: `${TERMS.machine} Dashboard` }]}
         actions={
           <>
             <Button icon={<TimerOff className="size-4" />} onClick={() => setModal('downtime')}>
@@ -92,10 +93,8 @@ export default function LoomDashboardPage() {
           value={hall}
           onChange={setHall}
           tabs={[
-            { value: 'all', label: 'All halls', count: looms.length },
-            { value: 'Hall A', label: 'Hall A', count: looms.filter((l) => l.hall === 'Hall A').length },
-            { value: 'Hall B', label: 'Hall B', count: looms.filter((l) => l.hall === 'Hall B').length },
-            { value: 'Hall C', label: 'Hall C', count: looms.filter((l) => l.hall === 'Hall C').length },
+            { value: 'all', label: `All ${TERMS.area.toLowerCase()}s`, count: looms.length },
+            ...TERMS.areas.map((a) => ({ value: a, label: a, count: looms.filter((l) => l.hall === a).length })),
           ]}
         />
         <div className="relative w-full sm:w-60">
@@ -103,7 +102,7 @@ export default function LoomDashboardPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Loom, operator, fabric…"
+            placeholder={`${TERMS.machine}, operator, ${TERMS.productOne.toLowerCase()}…`}
             className="h-9 w-full rounded-lg border border-line-strong bg-white pr-3 pl-9 text-[13px] focus:border-brand-400 focus:ring-4 focus:ring-brand-100 focus:outline-none"
           />
         </div>
@@ -118,7 +117,7 @@ export default function LoomDashboardPage() {
               value={sortBy}
               onChange={setSortBy}
               tabs={[
-                { value: 'id', label: 'Loom no.' },
+                { value: 'id', label: `${TERMS.machine} no.` },
                 { value: 'eff', label: 'Lowest efficiency' },
               ]}
             />
@@ -138,7 +137,7 @@ export default function LoomDashboardPage() {
           <DataTable data={filtered} columns={columns} rowKey={(l) => l.id} onRowClick={(l) => navigate(`/looms/${l.id}`)} pageSize={20} />
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border border-line bg-white">
-            <EmptyState icon={<Search />} title="No looms match" body="Try another hall, status or search term." action={<Button size="sm" onClick={() => { setQ(''); setStatus(null); setHall('all') }}>Reset filters</Button>} />
+            <EmptyState icon={<Search />} title={`No ${TERMS.machines.toLowerCase()} match`} body={`Try another ${TERMS.area.toLowerCase()}, status or search term.`} action={<Button size="sm" onClick={() => { setQ(''); setStatus(null); setHall('all') }}>Reset filters</Button>} />
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
@@ -176,7 +175,7 @@ function LoomCard({ loom: l, onClick }: { loom: Loom; onClick: () => void }) {
       </div>
       <div className="mt-3 flex items-end justify-between">
         <div className="text-[13px] text-slate-500 num">
-          <b className="font-display text-base font-semibold text-slate-900">{num(l.todayProduction)}</b> / {num(l.target)} m
+          <b className="font-display text-base font-semibold text-slate-900">{num(l.todayProduction)}</b> / {num(l.target)} {TERMS.out}
         </div>
         <EfficiencyValue value={l.efficiency} className="text-[15px]" />
       </div>

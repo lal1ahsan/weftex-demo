@@ -7,6 +7,7 @@ import { TableActions } from '@/components/common/TableActions'
 import { PURCHASE_ORDERS } from '@/data/commercial'
 import { SUPPLIERS, supplierById } from '@/data/inventory'
 import { date, num, pkr, pkrCompact, sum } from '@/utils/format'
+import { IS_POLY } from '@/data/dataset'
 
 export default function PurchaseOrdersPage() {
   const [adding, setAdding] = useState(false)
@@ -57,7 +58,7 @@ export default function PurchaseOrdersPage() {
         successMessage="Purchase order PO-3181 created and sent for approval."
         fields={[
           { name: 'supplier', label: 'Supplier', type: 'select', options: SUPPLIERS.filter((s) => s.status === 'Active').map((s) => s.name), required: true, full: true },
-          { name: 'item', label: 'Item', required: true, full: true, placeholder: 'Cotton Yarn 40s Combed' },
+          { name: 'item', label: 'Item', required: true, full: true, placeholder: IS_POLY ? 'PP Homopolymer H030SG' : 'Cotton Yarn 40s Combed' },
           { name: 'qty', label: 'Quantity', type: 'number', required: true },
           { name: 'unit', label: 'Unit', type: 'select', options: ['kg', 'pcs', 'set', 'beam', 'litre'], required: true },
           { name: 'rate', label: 'Rate', type: 'number', suffix: 'PKR', required: true },

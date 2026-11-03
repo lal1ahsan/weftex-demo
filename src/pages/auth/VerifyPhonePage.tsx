@@ -6,7 +6,7 @@ import { Button, Input, useToast } from '@/components/ui'
 import { useAccount } from '@/context/Account'
 import { displayPhone } from '@/data/account'
 
-/** PRD 2.4 — "Verify phone": 6 digits, 10 minutes, 5 tries, Resend after 60 seconds. */
+/** PRD 2.1 — "Verify phone": 6 digits, 10 minutes, 5 tries, Resend after 60 seconds. */
 export default function VerifyPhonePage() {
   const { ready, me, otp, sendOtp, checkOtp, signOut, landingFor } = useAccount()
   const navigate = useNavigate()

@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppState'
 import { DOWNTIME_CATEGORIES } from '@/data/production'
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { date, duration } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 export default function DowntimeRecordsPage() {
   const { downtime } = useApp()
@@ -19,7 +20,7 @@ export default function DowntimeRecordsPage() {
 
   const columns: Column<DowntimeRecord>[] = [
     { key: 'id', header: 'ID', cell: (d) => <span className="text-slate-500">{d.id}</span>, hideBelow: 'lg' },
-    { key: 'loom', header: 'Loom', cell: (d) => <span className="font-semibold text-slate-900">{d.loomId}</span>, sort: (d) => d.loomId },
+    { key: 'loom', header: TERMS.machine, cell: (d) => <span className="font-semibold text-slate-900">{d.loomId}</span>, sort: (d) => d.loomId },
     { key: 'date', header: 'Date', cell: (d) => date(d.date), sort: (d) => d.date + d.start },
     { key: 'shift', header: 'Shift', cell: (d) => d.shift, hideBelow: 'md' },
     { key: 'time', header: 'Time', cell: (d) => `${d.start} – ${d.end || 'now'}`, hideBelow: 'md' },
@@ -43,7 +44,7 @@ export default function DowntimeRecordsPage() {
     <div>
       <PageHeader
         title="Downtime Records"
-        description="Every loom stoppage with its cause. Click a record to view the breakdown."
+        description={`Every ${TERMS.machine.toLowerCase()} stoppage with its cause. Click a record to view the breakdown.`}
         breadcrumbs={[{ label: 'Downtime', to: '/downtime' }, { label: 'Downtime Records' }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>
@@ -57,7 +58,7 @@ export default function DowntimeRecordsPage() {
         rowKey={(d) => d.id}
         initialQuery={q}
         searchText={(d) => `${d.id} ${d.loomId} ${d.reason} ${d.remarks}`}
-        searchPlaceholder="Search loom, reason…"
+        searchPlaceholder={`Search ${TERMS.machine.toLowerCase()}, reason…`}
         filters={[
           { label: 'Category', options: DOWNTIME_CATEGORIES, value: (d) => d.category },
           { label: 'Shift', options: ['Morning', 'Evening', 'Night'], value: (d) => d.shift },

@@ -7,7 +7,8 @@ import { LOOMS } from '@/data/production'
 import { FABRICS, SUPPLIERS, YARNS } from '@/data/inventory'
 import { CUSTOMERS, ROLLS, SALES_ORDERS, customerById } from '@/data/commercial'
 import { NAV } from '@/routes/nav'
-import { cn, meters, num } from '@/utils/format'
+import { cn, num, stockQty } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 interface SearchItem {
   group: string
@@ -31,8 +32,8 @@ function buildIndex(): SearchItem[] {
   )
   return [
     ...LOOMS.map((l) => ({ group: 'Looms', icon: Factory, title: `Loom ${l.id}`, subtitle: `${l.status} · ${l.manufacturer} ${l.model} · ${l.hall}`, to: `/looms/${l.id}`, haystack: `loom ${l.id} ${l.status} ${l.hall} ${l.operator}` })),
-    ...YARNS.map((y) => ({ group: 'Yarn', icon: Spool, title: `${y.code} · ${y.name} ${y.count}`, subtitle: `${y.type} · ${num(y.stockKg)} kg in stock`, to: `/yarn?q=${y.code}`, haystack: `yarn ${y.code} ${y.name} ${y.count} ${y.type} ${y.supplier}` })),
-    ...FABRICS.map((f) => ({ group: 'Fabric', icon: Layers, title: `${f.code} · ${f.name}`, subtitle: `${f.construction} · ${f.density} · ${meters(f.meters)}`, to: `/fabric/${f.code}`, haystack: `fabric ${f.code} ${f.name} ${f.construction}` })),
+    ...YARNS.map((y) => ({ group: TERMS.raw, icon: Spool, title: `${y.code} · ${y.name} ${y.count}`, subtitle: `${y.type} · ${num(y.stockKg)} kg in stock`, to: `/yarn?q=${y.code}`, haystack: `${TERMS.raw.toLowerCase()} ${y.code} ${y.name} ${y.count} ${y.type} ${y.supplier}` })),
+    ...FABRICS.map((f) => ({ group: TERMS.productOne, icon: Layers, title: `${f.code} · ${f.name}`, subtitle: `${f.construction} · ${f.density} · ${stockQty(f.meters)}`, to: `/fabric/${f.code}`, haystack: `${TERMS.productOne.toLowerCase()} ${f.code} ${f.name} ${f.construction}` })),
     ...ROLLS.map((r) => ({ group: 'Rolls', icon: Package, title: `Roll ${r.id}`, subtitle: `${r.fabricCode} · ${r.loomId} · ${r.meters} m · ${r.quality}`, to: `/fabric/rolls/${r.id}`, haystack: `roll ${r.id} ${r.fabricCode} ${r.loomId}` })),
     ...CUSTOMERS.map((c) => ({ group: 'Customers', icon: Users, title: c.name, subtitle: `${c.city} · ${c.contact}`, to: `/sales/customers/${c.id}`, haystack: `customer ${c.name} ${c.city} ${c.contact} ${c.id}` })),
     ...SALES_ORDERS.map((o) => ({ group: 'Sales Orders', icon: ShoppingBag, title: o.id, subtitle: `${customerById(o.customerId)?.name} · ${num(o.quantity)} m · ${o.status}`, to: `/sales/orders/${o.id}`, haystack: `order ${o.id} ${customerById(o.customerId)?.name} ${o.status}` })),
@@ -41,7 +42,7 @@ function buildIndex(): SearchItem[] {
   ]
 }
 
-const SUGGESTIONS = ['L-12', 'YRN-001', 'Roll R-10251', 'Ahmed Textile', 'SO-1024']
+const SUGGESTIONS = IS_POLY ? ['M-12', 'YRN-001', 'Bundle BN-10251', 'Sunrise Flour Mills', 'SO-1024'] : ['L-12', 'YRN-001', 'Roll R-10251', 'Ahmed Textile', 'SO-1024']
 
 export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
@@ -117,7 +118,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search looms, yarn, rolls, customers, orders…"
+            placeholder={`Search ${TERMS.machines.toLowerCase()}, ${TERMS.raw.toLowerCase()}, ${TERMS.packs.toLowerCase()}, customers, orders…`}
             className="h-14 flex-1 bg-transparent text-[15px] placeholder:text-slate-400 focus:outline-none"
           />
           <kbd className="rounded-md border border-line px-1.5 py-0.5 text-[11px] font-medium text-slate-400">ESC</kbd>
@@ -138,7 +139,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
           {q && results.length === 0 && (
             <div className="px-4 py-12 text-center">
               <p className="text-sm font-semibold text-slate-800">No results for “{q}”</p>
-              <p className="mt-1 text-[13px] text-slate-500">Try a loom number (L-12), yarn code (YRN-001) or order (SO-1024).</p>
+              <p className="mt-1 text-[13px] text-slate-500">Try a {TERMS.machine.toLowerCase()} number ({IS_POLY ? 'M-12' : 'L-12'}), {TERMS.raw.toLowerCase()} code (YRN-001) or order (SO-1024).</p>
             </div>
           )}
           {grouped.map((g) => (

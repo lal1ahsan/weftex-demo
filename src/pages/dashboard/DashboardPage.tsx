@@ -25,10 +25,9 @@ import { SHIFTS } from '@/data/factory'
 import { useAccount } from '@/context/Account'
 import { FABRICS, YARNS, yarnStatus } from '@/data/inventory'
 import { CUSTOMERS, ENERGY, SALES_ORDERS, customerById } from '@/data/commercial'
-import { costPerMeter } from '@/data/costing'
-import { FABRIC_YARN_RATE } from '@/data/inventory'
+import { IS_POLY, TERMS } from '@/data/dataset'
 import { DEMO_TODAY, TODAY_ISO } from '@/data/seed'
-import { byLoom, byShift, dailyTrend, downtimeByCategory, loomStatusCounts, onDate, totals, YESTERDAY_ISO } from '@/data/metrics'
+import { byLoom, byShift, dailyTrend, downtimeByCategory, loomStatusCounts, onDate, productionValue, totals, YESTERDAY_ISO } from '@/data/metrics'
 import { cn, dateLong, delta, duration, meters, num, pct, pkrCompact, pkrM, sum } from '@/utils/format'
 
 export default function DashboardPage() {
@@ -72,17 +71,10 @@ export default function DashboardPage() {
   const dtDelta = delta(m.dtToday, m.dtYesterday)
   const wasteDelta = m.today.wastagePct - m.yesterday.wastagePct
 
-  // Business snapshot (today's production valued at fabric rates vs cost per meter)
+  // Business snapshot (today's production valued at selling rates vs cost per meter, or per bag)
   const snapshot = useMemo(() => {
-    const today = onDate(production, TODAY_ISO)
-    let value = 0
-    let cost = 0
-    today.forEach((r) => {
-      const f = FABRICS.find((x) => x.code === r.fabricCode)!
-      value += r.actual * f.ratePerMeter
-      cost += r.actual * costPerMeter({ ...f, yarnRate: FABRIC_YARN_RATE[f.code] }).total
-    })
-    return { value, cost, margin: value - cost, costPerM: cost / Math.max(1, sum(today, (r) => r.actual)) }
+    const v = productionValue(onDate(production, TODAY_ISO))
+    return { value: v.value, cost: v.cost, margin: v.margin, costPerM: v.costPerUnit }
   }, [production])
 
   const attention = [
@@ -97,12 +89,12 @@ export default function DashboardPage() {
       key: o.id,
       tone: 'blue' as const,
       title: `${o.id} due tomorrow`,
-      body: `${customerById(o.customerId)?.name} · ${num(o.quantity - o.delivered)} m pending`,
+      body: `${customerById(o.customerId)?.name} · ${num(o.quantity - o.delivered)} ${TERMS.stock} pending`,
       to: `/sales/orders/${o.id}`,
     })),
   ]
 
-  const halls = ['Hall A', 'Hall B', 'Hall C'].map((hall) => {
+  const halls = TERMS.areas.map((hall) => {
     const ls = looms.filter((l) => l.hall === hall)
     const a = sum(ls, (l) => l.todayProduction)
     const t = sum(ls, (l) => l.target)
@@ -144,7 +136,7 @@ export default function DashboardPage() {
       {/* Primary KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Total Looms"
+          label={`Total ${TERMS.machines}`}
           value={looms.length}
           icon={<Factory />}
           to="/looms"
@@ -167,7 +159,7 @@ export default function DashboardPage() {
         <KpiCard
           label="Today's Production"
           value={num(m.today.actual)}
-          unit="m"
+          unit={TERMS.out}
           icon={<Ruler />}
           to="/production"
           footer={
@@ -176,14 +168,14 @@ export default function DashboardPage() {
                 <span className="text-slate-600">
                   <b className="font-semibold text-slate-900 num">{pct(m.today.efficiency)}</b> of target
                 </span>
-                <span className="text-slate-500 num">{num(m.today.target)} m</span>
+                <span className="text-slate-500 num">{num(m.today.target)} {TERMS.out}</span>
               </div>
               <ProgressBar value={m.today.efficiency} className="mt-2" height="h-2" />
             </div>
           }
         />
         <KpiCard
-          label="Loom Efficiency"
+          label={`${TERMS.machine} Efficiency`}
           value={pct(m.today.efficiency)}
           icon={<Gauge />}
           accent="green"
@@ -201,7 +193,7 @@ export default function DashboardPage() {
           footer={
             <p className="text-[13px] text-slate-500">
               <b className="font-semibold text-slate-800 num">{downtime.filter((d) => d.date === TODAY_ISO).length}</b> stoppages ·{' '}
-              <b className="font-semibold text-slate-800 num">{m.status.Stopped}</b> looms down now
+              <b className="font-semibold text-slate-800 num">{m.status.Stopped}</b> {TERMS.machines.toLowerCase()} down now
             </p>
           }
         />
@@ -217,8 +209,8 @@ export default function DashboardPage() {
           to="/production/wastage"
           delta={{ value: `${Math.abs(wasteDelta).toFixed(1)}%`, direction: wasteDelta <= 0 ? 'down' : 'up', good: wasteDelta <= 0, label: wasteDelta <= 0 ? 'better' : 'worse' }}
         />
-        <KpiCard label="Yarn Stock" value={pkrCompact(yarnValue)} icon={<Spool />} accent="violet" to="/yarn" sub={<span>{num(sum(YARNS, (y) => y.stockKg))} kg · {YARNS.length} counts</span>} />
-        <KpiCard label="Fabric Stock" value={pkrCompact(fabricValue)} icon={<Layers />} accent="teal" to="/fabric" sub={<span>{num(sum(FABRICS, (f) => f.meters))} m · {num(sum(FABRICS, (f) => f.rolls))} rolls</span>} />
+        <KpiCard label={`${TERMS.raw} Stock`} value={pkrCompact(yarnValue)} icon={<Spool />} accent="violet" to="/yarn" sub={<span>{num(sum(YARNS, (y) => y.stockKg))} kg · {YARNS.length} {IS_POLY ? 'items' : 'counts'}</span>} />
+        <KpiCard label={`${TERMS.product} Stock`} value={pkrCompact(fabricValue)} icon={<Layers />} accent="teal" to="/fabric" sub={<span>{num(sum(FABRICS, (f) => f.meters))} {TERMS.stock} · {num(sum(FABRICS, (f) => f.rolls))} {TERMS.packs.toLowerCase()}</span>} />
         <KpiCard label="Receivables" value={pkrCompact(receivables)} icon={<Wallet />} accent="slate" to="/sales/customers" sub={<span>{CUSTOMERS.filter((c) => c.outstanding > 0).length} customers · PKR 4.1M overdue</span>} />
       </div>
 
@@ -227,7 +219,7 @@ export default function DashboardPage() {
         <Card className="xl:col-span-2">
           <CardHeader
             title="Production Trend"
-            subtitle="Last 7 days · meters"
+            subtitle={`Last 7 days · ${TERMS.outLong}`}
             actions={
               <Legend
                 items={[
@@ -242,13 +234,13 @@ export default function DashboardPage() {
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Production by Shift" subtitle="Today · meters" />
+          <CardHeader title="Production by Shift" subtitle={`Today · ${TERMS.outLong}`} />
           <CardBody>
             <DonutChart
               data={m.shifts.map((s, i) => ({ name: s.shift, value: s.actual, color: SHIFTS[i].color }))}
               format={meters}
               centerValue={`${(m.today.actual / 1000).toFixed(1)}K`}
-              centerLabel="meters"
+              centerLabel={TERMS.outLong}
               height={190}
             />
             <ul className="mt-4 divide-y divide-line">
@@ -260,7 +252,7 @@ export default function DashboardPage() {
                     <span className="text-slate-400">{SHIFTS[i].start}–{SHIFTS[i].end}</span>
                   </span>
                   <span className="text-right num">
-                    <b className="font-semibold text-slate-900">{num(s.actual)} m</b>
+                    <b className="font-semibold text-slate-900">{num(s.actual)} {TERMS.out}</b>
                     <span className={cn('ml-2', s.efficiency >= 95 ? 'text-emerald-600' : 'text-slate-500')}>{pct(s.efficiency)}</span>
                   </span>
                 </li>
@@ -274,8 +266,8 @@ export default function DashboardPage() {
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Loom Efficiency"
-            subtitle="Today · click a bar to open the loom"
+            title={`${TERMS.machine} Efficiency`}
+            subtitle={`Today · click a bar to open the ${TERMS.machine.toLowerCase()}`}
             actions={
               <Tabs
                 value={effView}
@@ -334,7 +326,7 @@ export default function DashboardPage() {
       {/* Attention / halls / business */}
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Card>
-          <CardHeader title="Needs Attention" subtitle={`${attention.length} items`} actions={<Badge tone="red">{m.status.Stopped} looms down</Badge>} />
+          <CardHeader title="Needs Attention" subtitle={`${attention.length} items`} actions={<Badge tone="red">{m.status.Stopped} {TERMS.machines.toLowerCase()} down</Badge>} />
           <ul className="divide-y divide-line border-t border-line">
             {attention.slice(0, 7).map((a) => (
               <li key={a.key}>
@@ -359,7 +351,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Hall Performance" subtitle="Today" actions={<Button size="sm" variant="ghost" onClick={() => navigate('/looms/status')}>Floor view <ArrowRight className="size-3.5" /></Button>} />
+          <CardHeader title={`${TERMS.area} Performance`} subtitle="Today" actions={<Button size="sm" variant="ghost" onClick={() => navigate('/looms/status')}>Floor view <ArrowRight className="size-3.5" /></Button>} />
           <CardBody className="space-y-5">
             {halls.map((h) => (
               <div key={h.hall}>
@@ -367,7 +359,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{h.hall}</p>
                     <p className="text-xs text-slate-500">
-                      {h.running}/{h.looms} running · {num(h.actual)} m
+                      {h.running}/{h.looms} running · {num(h.actual)} {TERMS.out}
                     </p>
                   </div>
                   <span className={cn('font-display text-lg font-semibold num', h.efficiency >= 95 ? 'text-emerald-600' : h.efficiency >= 92 ? 'text-slate-900' : 'text-amber-600')}>{pct(h.efficiency)}</span>
@@ -377,7 +369,7 @@ export default function DashboardPage() {
             ))}
             {weakest && (
               <div className="rounded-xl bg-slate-50 p-3.5 text-[13px] text-slate-600">
-                <b className="font-semibold text-slate-800">{weakest.hall}</b> is the weakest hall today
+                <b className="font-semibold text-slate-800">{weakest.hall}</b> is the weakest {TERMS.area.toLowerCase()} today
                 {weakestStops.length > 0 ? (
                   <>
                     {' '}— {weakestStops.map((l) => `${l.id} (${l.stopReason?.split(/ — | \(/)[0].toLowerCase()})`).join(', ')} {weakestStops.length > 1 ? 'are' : 'is'} stopped.
@@ -397,7 +389,7 @@ export default function DashboardPage() {
               {[
                 { label: 'Production value', value: pkrCompact(snapshot.value) },
                 { label: 'Production cost', value: pkrCompact(snapshot.cost) },
-                { label: 'Avg. cost / meter', value: pkrM(snapshot.costPerM) },
+                { label: IS_POLY ? 'Avg. cost / bag' : 'Avg. cost / meter', value: pkrM(snapshot.costPerM) },
                 { label: 'Est. gross margin', value: pkrCompact(snapshot.margin), good: true },
               ].map((s) => (
                 <div key={s.label} className="rounded-xl border border-line p-3.5">

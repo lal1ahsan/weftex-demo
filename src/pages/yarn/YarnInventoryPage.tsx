@@ -4,9 +4,12 @@ import type { YarnItem } from '@/types'
 import { Button, DataTable, DetailItem, KpiCard, Modal, PageHeader, ProgressBar, StatusBadge, useToast, type Column } from '@/components/ui'
 import { QuickFormModal } from '@/components/forms/QuickFormModal'
 import { TableActions } from '@/components/common/TableActions'
-import { SUPPLIERS, YARN_ISSUES, YARN_PURCHASES, YARNS, yarnStatus } from '@/data/inventory'
+import { RAW_CATEGORY, SUPPLIERS, YARN_ISSUES, YARN_PURCHASES, YARNS, yarnStatus } from '@/data/inventory'
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { date, kg, num, pkr, pkrCompact, sum } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
+
+const STORES = IS_POLY ? ['Granules Store 1', 'Granules Store 2'] : ['Yarn Store 1', 'Yarn Store 2']
 
 export default function YarnInventoryPage() {
   const q = useQueryParam('q')
@@ -21,10 +24,10 @@ export default function YarnInventoryPage() {
   const issued = sum(YARNS, (y) => y.issuedKgMonth)
 
   const columns: Column<YarnItem>[] = [
-    { key: 'code', header: 'Yarn Code', cell: (y) => <span className="font-semibold text-slate-900">{y.code}</span>, sort: (y) => y.code },
-    { key: 'name', header: 'Yarn Name', cell: (y) => y.name, sort: (y) => y.name },
-    { key: 'count', header: 'Count', cell: (y) => <span className="font-medium text-slate-900">{y.count}</span>, sort: (y) => parseFloat(y.count) || 0 },
-    { key: 'type', header: 'Type', cell: (y) => y.type, hideBelow: 'md' },
+    { key: 'code', header: `${TERMS.raw} Code`, cell: (y) => <span className="font-semibold text-slate-900">{y.code}</span>, sort: (y) => y.code },
+    { key: 'name', header: `${TERMS.raw} Name`, cell: (y) => y.name, sort: (y) => y.name },
+    { key: 'count', header: TERMS.rawCount, cell: (y) => <span className="font-medium text-slate-900">{y.count}</span>, sort: (y) => parseFloat(y.count) || 0 },
+    { key: 'type', header: TERMS.rawType, cell: (y) => y.type, hideBelow: 'md' },
     { key: 'supplier', header: 'Supplier', cell: (y) => y.supplier, sort: (y) => y.supplier, hideBelow: 'lg' },
     {
       key: 'stock',
@@ -50,21 +53,21 @@ export default function YarnInventoryPage() {
   return (
     <div>
       <PageHeader
-        title="Yarn Inventory"
-        description="Stock by count, lot and supplier across both yarn stores."
-        breadcrumbs={[{ label: 'Yarn' }, { label: 'Yarn Inventory' }]}
+        title={`${TERMS.raw} Inventory`}
+        description={`Stock by ${TERMS.rawCount.toLowerCase()}, lot and supplier across both ${TERMS.raw.toLowerCase()} stores.`}
+        breadcrumbs={[{ label: TERMS.raw }, { label: `${TERMS.raw} Inventory` }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>
-            Add Yarn
+            Add {TERMS.raw}
           </Button>
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard label="Total Yarn Stock" value={num(totalKg)} unit="kg" icon={<Boxes />} sub={<span>{YARNS.length} yarn items</span>} />
+        <KpiCard label={`Total ${TERMS.raw} Stock`} value={num(totalKg)} unit="kg" icon={<Boxes />} sub={<span>{YARNS.length} {TERMS.raw.toLowerCase()} items</span>} />
         <KpiCard label="Stock Value" value={pkrCompact(value)} icon={<Wallet />} accent="violet" sub={<span>At weighted average cost</span>} />
         <KpiCard label="Low Stock Items" value={low.length} icon={<TriangleAlert />} accent="amber" sub={<span>{low.map((y) => y.code).join(', ')}</span>} />
         <KpiCard label="Incoming" value={num(incoming)} unit="kg" icon={<ArrowDownToLine />} accent="teal" sub={<span>{YARN_PURCHASES.filter((p) => p.status !== 'Received').length} open purchases</span>} />
-        <KpiCard label="Issued (Sep)" value={num(issued)} unit="kg" icon={<ArrowUpFromLine />} accent="slate" sub={<span>To sizing & looms</span>} />
+        <KpiCard label="Issued (Sep)" value={num(issued)} unit="kg" icon={<ArrowUpFromLine />} accent="slate" sub={<span>{IS_POLY ? 'To extruders, printing & conversion' : 'To sizing & looms'}</span>} />
       </div>
 
       <div className="mt-4">
@@ -74,11 +77,11 @@ export default function YarnInventoryPage() {
           rowKey={(y) => y.code}
           initialQuery={q}
           searchText={(y) => `${y.code} ${y.name} ${y.count} ${y.type} ${y.supplier} ${y.lot}`}
-          searchPlaceholder="Search code, count, supplier…"
+          searchPlaceholder={`Search code, ${TERMS.rawCount.toLowerCase()}, supplier…`}
           filters={[
             { label: 'Material', options: [...new Set(YARNS.map((y) => y.material))].sort(), value: (y) => y.material },
             { label: 'Status', options: ['In Stock', 'Low Stock', 'Out of Stock'], value: (y) => yarnStatus(y) },
-            { label: 'Store', options: ['Yarn Store 1', 'Yarn Store 2'], value: (y) => y.warehouse },
+            { label: 'Store', options: STORES, value: (y) => y.warehouse },
           ]}
           actions={<TableActions importable />}
           onRowClick={setSelected}
@@ -127,21 +130,21 @@ export default function YarnInventoryPage() {
         open={adding}
         onClose={() => setAdding(false)}
         icon={<Spool />}
-        title="Add Yarn"
-        description="Create a new yarn item in the master list."
-        submitLabel="Save Yarn"
-        successMessage="Yarn item added successfully."
+        title={`Add ${TERMS.raw}`}
+        description={`Create a new ${TERMS.raw.toLowerCase()} item in the master list.`}
+        submitLabel={`Save ${TERMS.raw}`}
+        successMessage={`${TERMS.raw} item added successfully.`}
         fields={[
-          { name: 'name', label: 'Yarn name', placeholder: 'Cotton Yarn', required: true },
-          { name: 'count', label: 'Count', placeholder: '40s', required: true },
-          { name: 'type', label: 'Type', type: 'select', options: ['Combed', 'Carded', 'Compact Combed', 'Open End', 'Ring Spun', 'Textured'], required: true },
-          { name: 'material', label: 'Material', type: 'select', options: ['Cotton', 'Poly/Cotton', 'Polyester', 'Viscose', 'Poly/Viscose', 'Linen/Cotton'], required: true },
-          { name: 'supplier', label: 'Supplier', type: 'select', options: SUPPLIERS.filter((s) => s.category === 'Yarn').map((s) => s.name), required: true },
+          { name: 'name', label: `${TERMS.raw} name`, placeholder: IS_POLY ? 'PP Homopolymer' : 'Cotton Yarn', required: true },
+          { name: 'count', label: TERMS.rawCount, placeholder: IS_POLY ? 'H030SG' : '40s', required: true },
+          { name: 'type', label: TERMS.rawType, type: 'select', options: IS_POLY ? ['Virgin', 'Recycled', 'Masterbatch', 'Film', 'Ink', 'Liquid', 'Cone'] : ['Combed', 'Carded', 'Compact Combed', 'Open End', 'Ring Spun', 'Textured'], required: true },
+          { name: 'material', label: 'Material', type: 'select', options: IS_POLY ? ['PP', 'LDPE', 'LLDPE', 'HDPE', 'BOPP', 'Filler', 'Colour', 'Additive', 'Ink', 'Solvent', 'Thread'] : ['Cotton', 'Poly/Cotton', 'Polyester', 'Viscose', 'Poly/Viscose', 'Linen/Cotton'], required: true },
+          { name: 'supplier', label: 'Supplier', type: 'select', options: SUPPLIERS.filter((s) => s.category === RAW_CATEGORY).map((s) => s.name), required: true },
           { name: 'lot', label: 'Lot number', placeholder: 'LT-26xxx' },
           { name: 'qty', label: 'Opening stock', type: 'number', suffix: 'kg', required: true },
           { name: 'cost', label: 'Cost per kg', type: 'number', suffix: 'PKR', required: true },
           { name: 'min', label: 'Minimum stock', type: 'number', suffix: 'kg' },
-          { name: 'store', label: 'Store', type: 'select', options: ['Yarn Store 1', 'Yarn Store 2'] },
+          { name: 'store', label: 'Store', type: 'select', options: STORES },
         ]}
       />
     </div>

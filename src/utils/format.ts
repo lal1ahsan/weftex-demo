@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx'
+import { TERMS } from '@/data/dataset'
 
 export const cn = (...inputs: ClassValue[]) => clsx(inputs)
 
@@ -30,7 +31,10 @@ export const compact = (n: number) => {
   return nf0.format(n)
 }
 
-export const meters = (n: number) => `${nf0.format(n)} m`
+/** A production quantity in the business's output unit: meters of fabric, or kg for poly bags. */
+export const meters = (n: number) => `${nf0.format(n)} ${TERMS.out}`
+/** A finished-goods quantity: meters of fabric, or bags. */
+export const stockQty = (n: number) => `${nf0.format(n)} ${TERMS.stock}`
 export const kg = (n: number) => `${nf0.format(n)} kg`
 
 export function duration(minutes: number) {

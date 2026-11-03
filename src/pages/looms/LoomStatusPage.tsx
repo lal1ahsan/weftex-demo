@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppState'
 import { fabricByCode } from '@/data/inventory'
 import { loomStatusCounts } from '@/data/metrics'
 import { cn, duration, num, pct, sum } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 export default function LoomStatusPage() {
   const navigate = useNavigate()
@@ -35,9 +36,9 @@ export default function LoomStatusPage() {
   return (
     <div>
       <PageHeader
-        title="Loom Status"
-        description="Floor view of every loom, arranged by hall."
-        breadcrumbs={[{ label: 'Looms', to: '/looms' }, { label: 'Loom Status' }]}
+        title={`${TERMS.machine} Status`}
+        description={`Floor view of every ${TERMS.machine.toLowerCase()}, arranged by ${TERMS.area.toLowerCase()}.`}
+        breadcrumbs={[{ label: TERMS.machines, to: '/looms' }, { label: `${TERMS.machine} Status` }]}
         actions={
           <>
             <span className="text-[13px] text-slate-500">Updated {seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m`} ago</span>
@@ -54,18 +55,18 @@ export default function LoomStatusPage() {
             <CardBody className="flex flex-wrap items-center justify-between gap-4 pt-5">
               <Legend items={(['Running', 'Idle', 'Stopped', 'Maintenance'] as const).map((s) => ({ label: s, color: LOOM_STATUS_COLOR[s], value: counts[s] }))} />
               <p className="text-[13px] text-slate-500">
-                Hover a loom for details · click to open
+                Hover a {TERMS.machine.toLowerCase()} for details · click to open
               </p>
             </CardBody>
           </Card>
-          {(['Hall A', 'Hall B', 'Hall C'] as const).map((hall) => {
+          {TERMS.areas.map((hall) => {
             const ls = looms.filter((l) => l.hall === hall)
             const eff = (sum(ls, (l) => l.todayProduction) / sum(ls, (l) => l.target)) * 100
             return (
               <Card key={hall}>
                 <CardHeader
                   title={hall}
-                  subtitle={`${ls.length} looms · ${ls[0].manufacturer} ${ls[0].model}${hall === 'Hall C' ? ' & Picanol OptiMax-i' : ''}`}
+                  subtitle={`${ls.length} ${TERMS.machines.toLowerCase()} · ${[...new Set(ls.map((l) => `${l.manufacturer} ${l.model}`))].join(' & ')}`}
                   actions={<span className="text-sm font-semibold text-slate-900 num">{pct(eff)} efficiency</span>}
                 />
                 <CardBody>
@@ -99,14 +100,14 @@ export default function LoomStatusPage() {
 
         <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
           <Card>
-            <CardHeader title={hovered ? `Loom ${hovered.id}` : 'Loom details'} subtitle={hovered ? `${hovered.manufacturer} ${hovered.model}` : 'Hover over a loom'} actions={hovered && <StatusBadge status={hovered.status} />} />
+            <CardHeader title={hovered ? `${TERMS.machine} ${hovered.id}` : `${TERMS.machine} details`} subtitle={hovered ? `${hovered.manufacturer} ${hovered.model}` : `Hover over a ${TERMS.machine.toLowerCase()}`} actions={hovered && <StatusBadge status={hovered.status} />} />
             <CardBody>
               {hovered ? (
                 <dl className="grid grid-cols-2 gap-3 text-[13px]">
                   {[
-                    ['Fabric', `${fabricByCode(hovered.fabricCode)?.construction} ${fabricByCode(hovered.fabricCode)?.name}`],
+                    [TERMS.productOne, `${fabricByCode(hovered.fabricCode)?.construction} ${fabricByCode(hovered.fabricCode)?.name}`],
                     ['Operator', hovered.operator],
-                    ['Production', `${num(hovered.todayProduction)} m`],
+                    ['Production', `${num(hovered.todayProduction)} ${TERMS.out}`],
                     ['Efficiency', pct(hovered.efficiency)],
                     ['RPM', hovered.rpm],
                     ['Downtime', hovered.downtimeMinutes ? duration(hovered.downtimeMinutes) : '—'],
@@ -118,12 +119,12 @@ export default function LoomStatusPage() {
                   ))}
                 </dl>
               ) : (
-                <p className="text-[13px] text-slate-500">Move the cursor over any loom on the floor plan to preview it here.</p>
+                <p className="text-[13px] text-slate-500">Move the cursor over any {TERMS.machine.toLowerCase()} on the floor plan to preview it here.</p>
               )}
             </CardBody>
           </Card>
           <Card>
-            <CardHeader title="Not Running" subtitle={`${down.length} looms`} />
+            <CardHeader title="Not Running" subtitle={`${down.length} ${TERMS.machines.toLowerCase()}`} />
             <ul className="divide-y divide-line border-t border-line">
               {down.map((l) => (
                 <li key={l.id}>

@@ -8,7 +8,7 @@ import { EMAIL_RE, normalizePhone } from '@/data/account'
 
 type Errors = Partial<Record<keyof SignUpInput | 'confirm' | 'terms' | 'form', string>>
 
-/** PRD 2.4 — the person who signs up becomes the Owner of a new business. */
+/** PRD 2.1 — the person who signs up becomes the Owner of a new business. */
 export default function SignUpPage() {
   const { ready, me, signUp, landingFor } = useAccount()
   const navigate = useNavigate()

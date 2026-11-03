@@ -13,9 +13,10 @@ import { downtimeByCategory } from '@/data/metrics'
 import { DOWNTIME_CATEGORIES } from '@/data/production'
 import { daysAgo, isoDate, TODAY_ISO } from '@/data/seed'
 import { dayShort, duration, num } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 export default function DowntimeDashboardPage() {
-  const { downtime } = useApp()
+  const { downtime, looms } = useApp()
   const [range, setRange] = useState<'today' | 'week'>('week')
   const [adding, setAdding] = useState(false)
   const [selected, setSelected] = useState<DowntimeRecord | null>(null)
@@ -50,7 +51,7 @@ export default function DowntimeDashboardPage() {
     <div>
       <PageHeader
         title="Downtime Dashboard"
-        description="Why looms are stopping, for how long, and who needs to act."
+        description={`Why ${TERMS.machines.toLowerCase()} are stopping, for how long, and who needs to act.`}
         breadcrumbs={[{ label: 'Downtime' }, { label: 'Downtime Dashboard' }]}
         actions={
           <>
@@ -73,16 +74,16 @@ export default function DowntimeDashboardPage() {
         <KpiCard label="Total Downtime" value={duration(total)} icon={<Timer />} accent="red" sub={<span>{range === 'today' ? 'Today' : 'Last 7 days'}</span>} />
         <KpiCard label="Average per Breakdown" value={duration(records.length ? total / records.length : 0)} icon={<Activity />} accent="amber" sub={<span>Benchmark under 40m</span>} />
         <KpiCard label="Breakdowns" value={num(records.length)} icon={<AlertOctagon />} accent="violet" sub={<span>{ongoing.length} ongoing right now</span>} />
-        <KpiCard label="Looms Affected" value={num(loomsAffected)} icon={<Factory />} accent="slate" sub={<span>of 80 looms</span>} />
+        <KpiCard label={`${TERMS.machines} Affected`} value={num(loomsAffected)} icon={<Factory />} accent="slate" sub={<span>of {looms.length} {TERMS.machines.toLowerCase()}</span>} />
       </div>
 
       {ongoing.length > 0 && (
         <Card className="mt-4 border-rose-200">
-          <CardHeader title="Stopped Right Now" subtitle="Ongoing stoppages — click to view breakdown" actions={<Badge tone="red" dot>{ongoing.length} looms</Badge>} />
+          <CardHeader title="Stopped Right Now" subtitle="Ongoing stoppages — click to view breakdown" actions={<Badge tone="red" dot>{ongoing.length} {TERMS.machines.toLowerCase()}</Badge>} />
           <div className="grid gap-px border-t border-line bg-line sm:grid-cols-2 xl:grid-cols-3">
             {ongoing.map((d) => (
               <button key={d.id} onClick={() => setSelected(d)} className="flex items-start gap-3 bg-white px-5 py-4 text-left hover:bg-rose-50/40">
-                <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-rose-50 font-display text-xs font-semibold text-rose-700">{d.loomId.replace('L-', '')}</span>
+                <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-rose-50 font-display text-xs font-semibold text-rose-700">{d.loomId.replace(TERMS.idPrefix, '')}</span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-2">
                     <span className="text-[13px] font-semibold text-slate-900">{d.loomId}</span>
@@ -127,7 +128,7 @@ export default function DowntimeDashboardPage() {
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card>
-          <CardHeader title="Most Affected Looms" subtitle={range === 'today' ? 'Today' : 'Last 7 days'} />
+          <CardHeader title={`Most Affected ${TERMS.machines}`} subtitle={range === 'today' ? 'Today' : 'Last 7 days'} />
           <ul className="divide-y divide-line border-t border-line">
             {topLooms.map(([loomId, v], i) => (
               <li key={loomId}>

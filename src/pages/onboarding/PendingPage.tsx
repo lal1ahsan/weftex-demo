@@ -5,7 +5,7 @@ import { Badge, Button, DetailItem, useToast } from '@/components/ui'
 import { useAccount } from '@/context/Account'
 import { businessTypeLabel, displayPhone } from '@/data/account'
 
-/** PRD 2.7 — replaces every page after sign-in until the business is Active. */
+/** PRD 2.4 — replaces every page after sign-in until the business is Active. */
 export default function PendingPage() {
   const { ready, me, business, signOut, resubmit, landingFor } = useAccount()
   const navigate = useNavigate()

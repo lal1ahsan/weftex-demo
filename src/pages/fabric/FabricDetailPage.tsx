@@ -4,10 +4,14 @@ import type { Roll } from '@/types'
 import { Button, Card, CardBody, CardHeader, DataTable, DetailItem, EmptyState, KpiCard, PageHeader, StatusBadge, useToast, type Column } from '@/components/ui'
 import { BreakdownList, SERIES } from '@/components/charts/ChartKit'
 import { useApp } from '@/context/AppState'
-import { FABRIC_YARN_RATE, fabricByCode } from '@/data/inventory'
+import { fabricByCode } from '@/data/inventory'
 import { ROLLS, SALES_ORDERS, customerById } from '@/data/commercial'
-import { costPerMeter } from '@/data/costing'
+import { unitCost } from '@/data/metrics'
 import { date, kg, num, pkr, pkrCompact, pkrM } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
+
+/** Same colour per cost line as before: yarn, sizing, labour, electricity, maintenance, overhead. */
+const COST_COLORS = [SERIES[0], SERIES[4], SERIES[1], SERIES[2], SERIES[3], SERIES[5]]
 
 export default function FabricDetailPage() {
   const { code = '' } = useParams()
@@ -19,7 +23,7 @@ export default function FabricDetailPage() {
   if (!f) {
     return (
       <Card>
-        <EmptyState icon={<Layers />} title={`Fabric “${code}” not found`} action={<Button onClick={() => navigate('/fabric')}>Back to Fabric Inventory</Button>} />
+        <EmptyState icon={<Layers />} title={`${TERMS.productOne} “${code}” not found`} action={<Button onClick={() => navigate('/fabric')}>Back to {TERMS.product} Inventory</Button>} />
       </Card>
     )
   }
@@ -27,14 +31,14 @@ export default function FabricDetailPage() {
   const rolls = ROLLS.filter((r) => r.fabricCode === f.code)
   const weaving = looms.filter((l) => l.fabricCode === f.code)
   const orders = SALES_ORDERS.filter((o) => o.fabricCode === f.code && o.status !== 'Cancelled')
-  const cost = costPerMeter({ ...f, yarnRate: FABRIC_YARN_RATE[f.code] })
+  const cost = unitCost(f)
   const margin = ((f.ratePerMeter - cost.total) / f.ratePerMeter) * 100
 
   const columns: Column<Roll>[] = [
-    { key: 'id', header: 'Roll', cell: (r) => <span className="font-semibold text-brand-700">{r.id}</span>, sort: (r) => r.id },
-    { key: 'loom', header: 'Loom', cell: (r) => r.loomId },
+    { key: 'id', header: TERMS.pack, cell: (r) => <span className="font-semibold text-brand-700">{r.id}</span>, sort: (r) => r.id },
+    { key: 'loom', header: TERMS.machine, cell: (r) => r.loomId },
     { key: 'date', header: 'Date', cell: (r) => date(r.date), sort: (r) => r.date, hideBelow: 'md' },
-    { key: 'm', header: 'Meters', align: 'right', cell: (r) => num(r.meters), sort: (r) => r.meters },
+    { key: 'm', header: (TERMS.stockLong[0].toUpperCase() + TERMS.stockLong.slice(1)), align: 'right', cell: (r) => num(r.meters), sort: (r) => r.meters },
     { key: 'kg', header: 'Weight', align: 'right', cell: (r) => kg(r.weightKg), hideBelow: 'md' },
     { key: 'grade', header: 'Grade', align: 'center', cell: (r) => r.grade },
     { key: 'q', header: 'Quality', cell: (r) => <StatusBadge status={r.quality} /> },
@@ -44,10 +48,10 @@ export default function FabricDetailPage() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Fabric', to: '/fabric' }, { label: 'Fabric Inventory', to: '/fabric' }, { label: f.code }]}
-        title={`${f.construction} ${f.name}`}
+        breadcrumbs={[{ label: TERMS.product, to: '/fabric' }, { label: `${TERMS.product} Inventory`, to: '/fabric' }, { label: f.code }]}
+        title={IS_POLY ? f.name : `${f.construction} ${f.name}`}
         meta={<StatusBadge status={f.status} />}
-        description={`${f.code} · ${f.density} · ${f.widthInches}" · ${f.gsm} GSM · ${f.weave}`}
+        description={IS_POLY ? `${f.code} · ${f.construction} · ${f.density} mesh · ${f.gsm} GSM · ${f.weave}` : `${f.code} · ${f.density} · ${f.widthInches}" · ${f.gsm} GSM · ${f.weave}`}
         actions={
           <Button variant="primary" icon={<ShoppingBag className="size-4" />} onClick={() => toast.demo('Creating a sales order from stock is available in the production version.')}>
             Create Sales Order
@@ -55,10 +59,10 @@ export default function FabricDetailPage() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="In Stock" value={num(f.meters)} unit="m" sub={<span>{f.rolls} rolls · {kg(f.weightKg)}</span>} />
-        <KpiCard label="Stock Value" value={pkrCompact(f.meters * f.ratePerMeter)} accent="violet" sub={<span>@ {pkr(f.ratePerMeter)}/m</span>} />
-        <KpiCard label="Cost per Meter" value={pkrM(cost.total)} accent="amber" sub={<span>Gross margin {margin.toFixed(1)}%</span>} to="/costing/per-meter" />
-        <KpiCard label="Looms Weaving" value={weaving.length} accent="teal" sub={<span>{weaving.slice(0, 5).map((l) => l.id).join(', ') || 'None right now'}</span>} />
+        <KpiCard label="In Stock" value={num(f.meters)} unit={TERMS.stock} sub={<span>{f.rolls} {TERMS.packs.toLowerCase()} · {kg(f.weightKg)}</span>} />
+        <KpiCard label="Stock Value" value={pkrCompact(f.meters * f.ratePerMeter)} accent="violet" sub={<span>@ {pkr(f.ratePerMeter)}/{IS_POLY ? 'bag' : 'm'}</span>} />
+        <KpiCard label={IS_POLY ? 'Cost per Bag' : 'Cost per Meter'} value={pkrM(cost.total)} accent="amber" sub={<span>Gross margin {margin.toFixed(1)}%</span>} to="/costing/per-meter" />
+        <KpiCard label={IS_POLY ? `${TERMS.machines} Running` : 'Looms Weaving'} value={weaving.length} accent="teal" sub={<span>{weaving.slice(0, 5).map((l) => l.id).join(', ') || 'None right now'}</span>} />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
@@ -66,37 +70,27 @@ export default function FabricDetailPage() {
           <CardHeader title="Specification" />
           <CardBody>
             <dl className="grid grid-cols-2 gap-4">
-              <DetailItem label="Fabric code" value={f.code} />
-              <DetailItem label="Quality" value={f.name} />
-              <DetailItem label="Yarn counts (warp × weft)" value={f.construction} />
-              <DetailItem label="Reed × pick" value={f.density} />
+              <DetailItem label={`${TERMS.productOne} code`} value={f.code} />
+              <DetailItem label={IS_POLY ? 'Product' : 'Quality'} value={f.name} />
+              <DetailItem label={IS_POLY ? 'Size (width × length)' : 'Yarn counts (warp × weft)'} value={f.construction} />
+              <DetailItem label={IS_POLY ? 'Mesh' : 'Reed × pick'} value={f.density} />
               <DetailItem label="Width" value={`${f.widthInches}" (${Math.round(f.widthInches * 2.54)} cm)`} />
               <DetailItem label="GSM" value={f.gsm} />
-              <DetailItem label="Weave" value={f.weave} />
+              <DetailItem label={TERMS.weave} value={f.weave} />
               <DetailItem label="Location" value={f.location} />
             </dl>
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Cost per Meter" subtitle={`${pkrM(cost.total)} · selling ${pkr(f.ratePerMeter)}`} />
+          <CardHeader title={IS_POLY ? 'Cost per Bag' : 'Cost per Meter'} subtitle={`${pkrM(cost.total)} · selling ${pkr(f.ratePerMeter)}`} />
           <CardBody>
-            <BreakdownList
-              format={(v) => pkrM(v)}
-              items={[
-                { label: 'Yarn', value: cost.yarn, color: SERIES[0] },
-                { label: 'Sizing', value: cost.sizing, color: SERIES[4] },
-                { label: 'Labour', value: cost.labour, color: SERIES[1] },
-                { label: 'Electricity', value: cost.electricity, color: SERIES[2] },
-                { label: 'Maintenance', value: cost.maintenance, color: SERIES[3] },
-                { label: 'Overhead', value: cost.overhead, color: SERIES[5] },
-              ]}
-            />
+            <BreakdownList format={(v) => pkrM(v)} items={cost.items.map((it, i) => ({ ...it, color: COST_COLORS[i] }))} />
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Open Orders" subtitle={`${orders.length} orders for this fabric`} />
+          <CardHeader title="Open Orders" subtitle={`${orders.length} orders for this ${TERMS.productOne.toLowerCase()}`} />
           {orders.length === 0 ? (
-            <EmptyState icon={<ShoppingBag />} title="No orders" body="No customer orders for this quality yet." className="py-8" />
+            <EmptyState icon={<ShoppingBag />} title="No orders" body={`No customer orders for this ${IS_POLY ? 'product' : 'quality'} yet.`} className="py-8" />
           ) : (
             <ul className="divide-y divide-line border-t border-line">
               {orders.slice(0, 6).map((o) => (
@@ -107,7 +101,7 @@ export default function FabricDetailPage() {
                       <span className="block truncate text-xs text-slate-500">{customerById(o.customerId)?.name}</span>
                     </span>
                     <span className="text-right text-xs text-slate-500 num">
-                      {num(o.quantity)} m<br />
+                      {num(o.quantity)} {TERMS.stock}<br />
                       <StatusBadge status={o.status} />
                     </span>
                   </Link>
@@ -118,7 +112,7 @@ export default function FabricDetailPage() {
         </Card>
       </div>
       <div className="mt-4">
-        <DataTable title="Rolls" subtitle={`${rolls.length} rolls of this quality`} data={rolls} columns={columns} rowKey={(r) => r.id} onRowClick={(r) => navigate(`/fabric/rolls/${r.id}`)} pageSize={8} emptyMessage="No rolls recorded for this fabric this week." />
+        <DataTable title={TERMS.packs} subtitle={`${rolls.length} ${TERMS.packs.toLowerCase()} of this ${IS_POLY ? 'product' : 'quality'}`} data={rolls} columns={columns} rowKey={(r) => r.id} onRowClick={(r) => navigate(`/fabric/rolls/${r.id}`)} pageSize={8} emptyMessage={`No ${TERMS.packs.toLowerCase()} recorded for this ${TERMS.productOne.toLowerCase()} this week.`} />
       </div>
     </div>
   )

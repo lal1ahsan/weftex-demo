@@ -14,6 +14,7 @@ import { TODAY_ISO } from '@/data/seed'
 import { dailyTrend } from '@/data/metrics'
 import type { DowntimeRecord, ProductionRecord } from '@/types'
 import { compact, date, duration, meters, num, pct, sum } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 export default function LoomDetailPage() {
   const { id = '' } = useParams()
@@ -33,7 +34,7 @@ export default function LoomDetailPage() {
   if (!loom) {
     return (
       <Card>
-        <EmptyState icon={<Factory />} title={`Loom “${id}” not found`} body="It may have been removed or the link is incorrect." action={<Button onClick={() => navigate('/looms')}>Back to Loom Dashboard</Button>} />
+        <EmptyState icon={<Factory />} title={`${TERMS.machine} “${id}” not found`} body="It may have been removed or the link is incorrect." action={<Button onClick={() => navigate('/looms')}>Back to {TERMS.machine} Dashboard</Button>} />
       </Card>
     )
   }
@@ -64,17 +65,17 @@ export default function LoomDetailPage() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Looms', to: '/looms' }, { label: 'Loom Dashboard', to: '/looms' }, { label: loom.id }]}
-        title={`Loom ${loom.id}`}
+        breadcrumbs={[{ label: TERMS.machines, to: '/looms' }, { label: `${TERMS.machine} Dashboard`, to: '/looms' }, { label: loom.id }]}
+        title={`${TERMS.machine} ${loom.id}`}
         meta={<StatusBadge status={loom.status} />}
         description={`${loom.manufacturer} ${loom.model} · ${loom.type} · ${loom.hall}`}
         actions={
           <>
             <div className="mr-1 flex">
-              <Button size="icon" variant="ghost" disabled={!prev} onClick={() => prev && navigate(`/looms/${prev.id}`)} aria-label="Previous loom">
+              <Button size="icon" variant="ghost" disabled={!prev} onClick={() => prev && navigate(`/looms/${prev.id}`)} aria-label={`Previous ${TERMS.machine.toLowerCase()}`}>
                 <ChevronLeft className="size-4" />
               </Button>
-              <Button size="icon" variant="ghost" disabled={!next} onClick={() => next && navigate(`/looms/${next.id}`)} aria-label="Next loom">
+              <Button size="icon" variant="ghost" disabled={!next} onClick={() => next && navigate(`/looms/${next.id}`)} aria-label={`Next ${TERMS.machine.toLowerCase()}`}>
                 <ChevronRight className="size-4" />
               </Button>
             </div>
@@ -120,7 +121,7 @@ export default function LoomDetailPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Today's Production" value={num(loom.todayProduction)} unit="m" sub={<span>Target {num(loom.target)} m</span>} />
+        <KpiCard label="Today's Production" value={num(loom.todayProduction)} unit={TERMS.out} sub={<span>Target {num(loom.target)} {TERMS.out}</span>} />
         <KpiCard label="Efficiency Today" value={pct(loom.efficiency)} accent={loom.efficiency >= 90 ? 'green' : 'amber'} footer={<ProgressBar value={loom.efficiency} tone="auto" height="h-2" />} />
         <KpiCard label="Downtime Today" value={loom.downtimeMinutes ? duration(loom.downtimeMinutes) : '0m'} accent="red" sub={<span>{todayStops} {todayStops === 1 ? 'stoppage' : 'stoppages'}</span>} />
         <KpiCard label="7-day Efficiency" value={pct(weekEff)} sub={<span>{duration(weekDowntime)} downtime this week</span>} />
@@ -128,20 +129,20 @@ export default function LoomDetailPage() {
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card>
-          <CardHeader title="Loom Information" />
+          <CardHeader title={`${TERMS.machine} Information`} />
           <CardBody>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
-              <DetailItem label="Loom number" value={loom.id} />
+              <DetailItem label={`${TERMS.machine} number`} value={loom.id} />
               <DetailItem label="Type" value={loom.type} />
               <DetailItem label="Manufacturer" value={loom.manufacturer} />
               <DetailItem label="Model" value={loom.model} />
-              <DetailItem label="Reed width" value={`${loom.widthInches}" (${Math.round(loom.widthInches * 2.54)} cm)`} />
+              <DetailItem label={IS_POLY ? 'Working width' : 'Reed width'} value={`${loom.widthInches}" (${Math.round(loom.widthInches * 2.54)} cm)`} />
               <DetailItem label="Speed" value={`${loom.rpm} RPM`} />
               <DetailItem label="Installed" value={date(loom.installed)} />
               <DetailItem label="Location" value={loom.hall} />
             </dl>
             <div className="mt-5 rounded-xl bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Current fabric</p>
+              <p className="text-xs font-medium text-slate-500">Current {TERMS.productOne.toLowerCase()}</p>
               <Link to={`/fabric/${fabric.code}`} className="mt-1 block text-sm font-semibold text-brand-700 hover:underline">
                 {fabric.code} · {fabric.name}
               </Link>
@@ -159,7 +160,7 @@ export default function LoomDetailPage() {
         <Card className="xl:col-span-2">
           <CardHeader
             title="Production — Last 7 Days"
-            subtitle="Meters per day vs target"
+            subtitle={`${IS_POLY ? 'Kg' : 'Meters'} per day vs target`}
             actions={
               <Legend
                 items={[
@@ -207,7 +208,7 @@ export default function LoomDetailPage() {
           <Card>
             <CardHeader title="Downtime History" subtitle={`${stops.length} stoppages · ${duration(weekDowntime)}`} />
             {stops.length === 0 ? (
-              <EmptyState icon={<CheckCircle2 />} title="No stoppages recorded" body="This loom has run without breakdowns this week." className="py-8" />
+              <EmptyState icon={<CheckCircle2 />} title="No stoppages recorded" body={`This ${TERMS.machine.toLowerCase()} has run without breakdowns this week.`} className="py-8" />
             ) : (
               <ul className="divide-y divide-line border-t border-line">
                 {stops.slice(0, 5).map((d: DowntimeRecord) => (
@@ -226,9 +227,9 @@ export default function LoomDetailPage() {
             )}
           </Card>
           <Card>
-            <CardHeader title="Rolls from this Loom" />
+            <CardHeader title={`${TERMS.packs} from this ${TERMS.machine}`} />
             {rolls.length === 0 ? (
-              <EmptyState icon={<Factory />} title="No rolls this week" className="py-8" />
+              <EmptyState icon={<Factory />} title={`No ${TERMS.packs.toLowerCase()} this week`} className="py-8" />
             ) : (
               <ul className="divide-y divide-line border-t border-line">
                 {rolls.map((r) => (
@@ -236,7 +237,7 @@ export default function LoomDetailPage() {
                     <Link to={`/fabric/rolls/${r.id}`} className="flex items-center justify-between px-5 py-2.5 text-[13px] hover:bg-slate-50">
                       <span className="font-semibold text-brand-700">{r.id}</span>
                       <span className="text-slate-500 num">
-                        {r.meters} m · {r.weightKg} kg
+                        {r.meters} {TERMS.stock} · {r.weightKg} kg
                       </span>
                       <StatusBadge status={r.quality} />
                     </Link>

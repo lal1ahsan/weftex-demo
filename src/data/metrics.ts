@@ -1,5 +1,8 @@
-import type { DowntimeCategory, DowntimeRecord, Loom, LoomStatus, ProductionRecord, ShiftName } from '@/types'
-import { yarnUsedKg } from './production'
+import type { DowntimeCategory, DowntimeRecord, Fabric, Loom, LoomStatus, ProductionRecord, ShiftName } from '@/types'
+import { costPerMeter, polyCostPerKg } from './costing'
+import { IS_POLY } from './dataset'
+import { FABRIC_YARN_RATE, bagKg, fabricByCode } from './inventory'
+import { loomById, yarnUsedKg } from './production'
 import { daysAgo, isoDate, TODAY_ISO } from './seed'
 import { dayShort, sum } from '@/utils/format'
 
@@ -59,4 +62,62 @@ export function byLoom(records: ProductionRecord[]) {
     map.set(r.loomId, { actual: cur.actual + r.actual, target: cur.target + r.target })
   })
   return [...map.entries()].map(([loomId, v]) => ({ loomId, ...v, efficiency: v.target ? (v.actual / v.target) * 100 : 0 }))
+}
+
+/**
+ * What production is worth and what it cost. Weaving values every meter woven.
+ * Poly bags count kg at every stage, so only the last stage (cutting & sealing),
+ * which turns printed fabric into finished bags, is valued; the rest is work in progress.
+ */
+export function productionValue(records: ProductionRecord[]) {
+  let value = 0
+  let cost = 0
+  let units = 0
+  records.forEach((r) => {
+    const f = fabricByCode(r.fabricCode)!
+    if (IS_POLY) {
+      if (loomById(r.loomId)?.type !== 'Cutting & Sealing') return
+      const bags = r.actual / bagKg(f)
+      value += bags * f.ratePerMeter
+      cost += r.actual * polyCostPerKg(FABRIC_YARN_RATE[f.code]).total
+      units += bags
+    } else {
+      value += r.actual * f.ratePerMeter
+      cost += r.actual * costPerMeter({ ...f, yarnRate: FABRIC_YARN_RATE[f.code] }).total
+      units += r.actual
+    }
+  })
+  return { value, cost, margin: value - cost, units, costPerUnit: cost / Math.max(1, units) }
+}
+
+/** Cost of one unit of finished stock — a meter of fabric, or one bag — and what it is made of. */
+export function unitCost(f: Fabric) {
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  if (IS_POLY) {
+    const kg = bagKg(f)
+    const c = polyCostPerKg(FABRIC_YARN_RATE[f.code])
+    const items = (
+      [
+        ['Granules', c.granules],
+        ['Extrusion', c.extrusion],
+        ['Weaving', c.weaving],
+        ['Printing', c.printing],
+        ['Cutting & sealing', c.conversion],
+        ['Overhead', c.overhead],
+      ] as const
+    ).map(([label, perKg]) => ({ label, value: r2(perKg * kg) }))
+    return { total: r2(items.reduce((s, i) => s + i.value, 0)), items }
+  }
+  const c = costPerMeter({ ...f, yarnRate: FABRIC_YARN_RATE[f.code] })
+  return {
+    total: c.total,
+    items: [
+      { label: 'Yarn', value: c.yarn },
+      { label: 'Sizing', value: c.sizing },
+      { label: 'Labour', value: c.labour },
+      { label: 'Electricity', value: c.electricity },
+      { label: 'Maintenance', value: c.maintenance },
+      { label: 'Overhead', value: c.overhead },
+    ],
+  }
 }

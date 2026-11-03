@@ -10,6 +10,7 @@ import { fabricByCode } from '@/data/inventory'
 import { totals } from '@/data/metrics'
 import { daysAgo, isoDate } from '@/data/seed'
 import { date, meters, num, pct } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 const DATES = Array.from({ length: 7 }, (_, i) => isoDate(daysAgo(i)))
 
@@ -26,9 +27,9 @@ export default function DailyProductionPage() {
     { key: 'id', header: 'Entry', cell: (r) => <span className="text-slate-500">{r.id}</span>, hideBelow: 'xl' },
     { key: 'date', header: 'Date', cell: (r) => date(r.date), sort: (r) => r.date },
     { key: 'shift', header: 'Shift', cell: (r) => r.shift, sort: (r) => r.shift },
-    { key: 'loom', header: 'Loom', cell: (r) => <span className="font-semibold text-slate-900">{r.loomId}</span>, sort: (r) => r.loomId },
+    { key: 'loom', header: TERMS.machine, cell: (r) => <span className="font-semibold text-slate-900">{r.loomId}</span>, sort: (r) => r.loomId },
     { key: 'op', header: 'Operator', cell: (r) => r.operator, sort: (r) => r.operator, hideBelow: 'lg' },
-    { key: 'fabric', header: 'Fabric', cell: (r) => `${fabricByCode(r.fabricCode)?.construction} · ${fabricByCode(r.fabricCode)?.name}`, hideBelow: 'md' },
+    { key: 'fabric', header: TERMS.productOne, cell: (r) => `${fabricByCode(r.fabricCode)?.construction} · ${fabricByCode(r.fabricCode)?.name}`, hideBelow: 'md' },
     { key: 'target', header: 'Target', align: 'right', cell: (r) => meters(r.target), sort: (r) => r.target },
     { key: 'actual', header: 'Actual', align: 'right', cell: (r) => <b className="font-semibold text-slate-900">{meters(r.actual)}</b>, sort: (r) => r.actual },
     { key: 'eff', header: 'Eff.', align: 'right', cell: (r) => <EfficiencyValue value={r.efficiency} />, sort: (r) => r.efficiency },
@@ -40,7 +41,7 @@ export default function DailyProductionPage() {
     <div>
       <PageHeader
         title="Daily Production"
-        description="Shift-wise production register for every loom — replaces the paper register."
+        description={`Shift-wise production register for every ${TERMS.machine.toLowerCase()} — replaces the paper register.`}
         breadcrumbs={[{ label: 'Production', to: '/production' }, { label: 'Daily Production' }]}
         actions={
           <>
@@ -71,7 +72,7 @@ export default function DailyProductionPage() {
         columns={columns}
         rowKey={(r) => r.id}
         searchText={(r) => `${r.id} ${r.loomId} ${r.operator} ${r.fabricCode} ${r.remarks}`}
-        searchPlaceholder="Search loom, operator, remarks…"
+        searchPlaceholder={`Search ${TERMS.machine.toLowerCase()}, operator, remarks…`}
         filters={[
           { label: 'Shift', options: ['Morning', 'Evening', 'Night'], value: (r) => r.shift },
           { label: 'Efficiency', options: ['Below 85%', '85–95%', 'Above 95%'], value: (r) => (r.efficiency < 85 ? 'Below 85%' : r.efficiency <= 95 ? '85–95%' : 'Above 95%') },

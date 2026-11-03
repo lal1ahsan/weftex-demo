@@ -6,7 +6,7 @@ import { Button, Field, Input } from '@/components/ui'
 import { useAccount } from '@/context/Account'
 import { DEMO_ADMIN, displayPhone, type Admin } from '@/data/account'
 
-/** PRD 2.7 — Weftex staff only; password plus a 6-digit SMS code every time. */
+/** PRD 2.4 — Weftex staff only; password plus a 6-digit SMS code every time. */
 export default function AdminLoginPage() {
   const { ready, admin, adminCheckPassword, otp, sendOtp, checkOtp } = useAccount()
   const navigate = useNavigate()

@@ -11,6 +11,7 @@ import { ROLLS } from '@/data/commercial'
 import { INSPECTORS } from '@/data/factory'
 import { fabricByCode } from '@/data/inventory'
 import { date, pct } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 export default function QualityPage() {
   const navigate = useNavigate()
@@ -27,14 +28,14 @@ export default function QualityPage() {
   }, [rolls])
 
   const setStatus = (roll: Roll, quality: QualityStatus) => {
-    setRolls((rs) => rs.map((r) => (r.id === roll.id ? { ...r, quality, location: quality === 'Rejected' ? 'Rejection Bay' : r.location === 'Rejection Bay' ? 'Warehouse A' : r.location } : r)))
+    setRolls((rs) => rs.map((r) => (r.id === roll.id ? { ...r, quality, location: quality === 'Rejected' ? 'Rejection Bay' : r.location === 'Rejection Bay' ? (IS_POLY ? 'Finished Goods Store' : 'Warehouse A') : r.location } : r)))
     setSelected(null)
-    toast.success(`Roll ${roll.id} marked as ${quality}`, quality === 'Passed' ? 'Released to warehouse stock.' : quality === 'Rejected' ? 'Moved to rejection bay and loom supervisor informed.' : 'Kept on hold for re-inspection.')
+    toast.success(`${TERMS.pack} ${roll.id} marked as ${quality}`, quality === 'Passed' ? 'Released to warehouse stock.' : quality === 'Rejected' ? `Moved to rejection bay and ${TERMS.machine.toLowerCase()} supervisor informed.` : 'Kept on hold for re-inspection.')
   }
 
   const columns: Column<Roll>[] = [
-    { key: 'id', header: 'Roll', cell: (r) => <span className="font-semibold text-slate-900">{r.id}</span>, sort: (r) => r.id },
-    { key: 'fabric', header: 'Fabric', cell: (r) => `${fabricByCode(r.fabricCode)?.construction} ${fabricByCode(r.fabricCode)?.name}` },
+    { key: 'id', header: TERMS.pack, cell: (r) => <span className="font-semibold text-slate-900">{r.id}</span>, sort: (r) => r.id },
+    { key: 'fabric', header: TERMS.productOne, cell: (r) => `${fabricByCode(r.fabricCode)?.construction} ${fabricByCode(r.fabricCode)?.name}` },
     { key: 'inspector', header: 'Inspector', cell: (r) => r.inspector, sort: (r) => r.inspector, hideBelow: 'lg' },
     { key: 'date', header: 'Date', cell: (r) => date(r.date), sort: (r) => r.date, hideBelow: 'md' },
     { key: 'grade', header: 'Quality', align: 'center', cell: (r) => <Badge tone={r.grade === 'A' ? 'green' : r.grade === 'B' ? 'amber' : 'red'}>Grade {r.grade}</Badge>, sort: (r) => r.grade },
@@ -47,7 +48,7 @@ export default function QualityPage() {
     <div>
       <PageHeader
         title="Quality Inspection"
-        description="Roll inspection results using the 4-point system."
+        description={IS_POLY ? 'Bundle inspection results using AQL sampling.' : 'Roll inspection results using the 4-point system.'}
         breadcrumbs={[{ label: 'Quality' }, { label: 'Quality Inspection' }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>
@@ -56,9 +57,9 @@ export default function QualityPage() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Inspected" value={rolls.length} icon={<ScanSearch />} sub={<span>Rolls this week</span>} />
+        <KpiCard label="Inspected" value={rolls.length} icon={<ScanSearch />} sub={<span>{TERMS.packs} this week</span>} />
         <KpiCard label="Passed" value={count('Passed')} icon={<CircleCheck />} accent="green" sub={<span>{pct((count('Passed') / rolls.length) * 100)} pass rate</span>} />
-        <KpiCard label="Rejected" value={count('Rejected')} icon={<CircleX />} accent="red" sub={<span>{pct((count('Rejected') / rolls.length) * 100)} of rolls</span>} />
+        <KpiCard label="Rejected" value={count('Rejected')} icon={<CircleX />} accent="red" sub={<span>{pct((count('Rejected') / rolls.length) * 100)} of {TERMS.packs.toLowerCase()}</span>} />
         <KpiCard label="On Hold" value={count('Hold')} icon={<Hourglass />} accent="amber" sub={<span>Awaiting decision</span>} />
       </div>
 
@@ -72,7 +73,7 @@ export default function QualityPage() {
                 <XAxis type="number" {...axisProps} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" {...axisProps} width={100} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="value" name="Rolls" fill={CHART.rose} radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" name={TERMS.packs} fill={CHART.rose} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardBody>
@@ -83,7 +84,7 @@ export default function QualityPage() {
             columns={columns}
             rowKey={(r) => r.id}
             searchText={(r) => `${r.id} ${r.fabricCode} ${r.inspector} ${r.defectTypes.join(' ')}`}
-            searchPlaceholder="Search roll, inspector, defect…"
+            searchPlaceholder={`Search ${TERMS.pack.toLowerCase()}, inspector, defect…`}
             filters={[
               { label: 'Status', options: ['Passed', 'Hold', 'Rejected'], value: (r) => r.quality },
               { label: 'Inspector', options: INSPECTORS, value: (r) => r.inspector },
@@ -105,7 +106,7 @@ export default function QualityPage() {
           selected && (
             <>
               <Button variant="ghost" onClick={() => navigate(`/fabric/rolls/${selected.id}`)} className="mr-auto">
-                View roll
+                View {TERMS.pack.toLowerCase()}
               </Button>
               <Button onClick={() => setStatus(selected, 'Hold')} disabled={selected.quality === 'Hold'}>
                 Hold
@@ -124,7 +125,7 @@ export default function QualityPage() {
           <dl className="grid grid-cols-2 gap-4">
             <DetailItem label="Current status" value={<StatusBadge status={selected.quality} />} />
             <DetailItem label="Grade" value={`Grade ${selected.grade}`} />
-            <DetailItem label="Length / weight" value={`${selected.meters} m · ${selected.weightKg} kg`} />
+            <DetailItem label={IS_POLY ? 'Bags / weight' : 'Length / weight'} value={`${selected.meters} ${TERMS.stock} · ${selected.weightKg} kg`} />
             <DetailItem label="Inspector" value={selected.inspector} />
             <DetailItem label="Defects" value={selected.defects} />
             <DetailItem label="Defect types" value={selected.defectTypes.join(', ') || 'None'} />
@@ -140,13 +141,13 @@ export default function QualityPage() {
         submitLabel="Save Inspection"
         successMessage="Inspection saved."
         fields={[
-          { name: 'roll', label: 'Roll number', placeholder: 'R-10321', required: true },
+          { name: 'roll', label: `${TERMS.pack} number`, placeholder: IS_POLY ? 'BN-10321' : 'R-10321', required: true },
           { name: 'inspector', label: 'Inspector', type: 'select', options: INSPECTORS, required: true },
-          { name: 'meters', label: 'Measured length', type: 'number', suffix: 'm', required: true },
+          { name: 'meters', label: IS_POLY ? 'Bags counted' : 'Measured length', type: 'number', suffix: TERMS.stock, required: true },
           { name: 'weight', label: 'Weight', type: 'number', suffix: 'kg' },
-          { name: 'points', label: 'Defect points', type: 'number', required: true },
+          { name: 'points', label: IS_POLY ? 'Defective bags' : 'Defect points', type: 'number', required: true },
           { name: 'result', label: 'Result', type: 'select', options: ['Passed', 'Hold', 'Rejected'], required: true },
-          { name: 'notes', label: 'Defects observed', type: 'textarea', placeholder: 'Broken picks at 34 m, oil stain at 80 m…' },
+          { name: 'notes', label: 'Defects observed', type: 'textarea', placeholder: IS_POLY ? 'Weak seal on 6 bags, print smudge on 3…' : 'Broken picks at 34 m, oil stain at 80 m…' },
         ]}
       />
     </div>

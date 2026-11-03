@@ -7,7 +7,8 @@ import { QuickFormModal } from '@/components/forms/QuickFormModal'
 import { PRODUCTION_PLANS } from '@/data/production'
 import { FABRICS, fabricByCode } from '@/data/inventory'
 import { customerById, orderById } from '@/data/commercial'
-import { cn, dayMonth, meters, num } from '@/utils/format'
+import { cn, dayMonth, num, stockQty } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 type Filter = 'all' | ProductionPlan['status']
 
@@ -21,7 +22,7 @@ export default function ProductionPlansPage() {
     <div>
       <PageHeader
         title="Production Plans"
-        description="Which looms are weaving which order, and whether delivery dates are on track."
+        description={IS_POLY ? 'Which machines are making which order, and whether delivery dates are on track.' : 'Which looms are weaving which order, and whether delivery dates are on track.'}
         breadcrumbs={[{ label: 'Production', to: '/production' }, { label: 'Production Plans' }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>
@@ -64,7 +65,7 @@ export default function ProductionPlansPage() {
               </div>
               <div className="mt-4 flex items-baseline justify-between text-[13px] num">
                 <span className="text-slate-500">
-                  <b className="font-semibold text-slate-900">{meters(p.producedMeters)}</b> of {meters(p.plannedMeters)}
+                  <b className="font-semibold text-slate-900">{stockQty(p.producedMeters)}</b> of {stockQty(p.plannedMeters)}
                 </span>
                 <span className={cn('font-semibold', p.status === 'Delayed' ? 'text-rose-600' : 'text-slate-900')}>{progress.toFixed(0)}%</span>
               </div>
@@ -84,7 +85,7 @@ export default function ProductionPlansPage() {
               </div>
               {p.status === 'Delayed' && (
                 <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                  {num(p.plannedMeters - p.producedMeters)} m behind schedule — L-03 stopped (picking stick). Consider moving the order to L-07 and L-18 on all shifts.
+                  {IS_POLY ? `${num(p.plannedMeters - p.producedMeters)} bags behind schedule — extruder M-03 stopped (screen pack choked). Consider moving the order to M-02 and running M-12's work on M-14 on all shifts.` : `${num(p.plannedMeters - p.producedMeters)} m behind schedule — L-03 stopped (picking stick). Consider moving the order to L-07 and L-18 on all shifts.`}
                 </p>
               )}
             </Card>
@@ -100,9 +101,9 @@ export default function ProductionPlansPage() {
         successMessage="Production plan created."
         fields={[
           { name: 'order', label: 'Sales order', type: 'select', options: ['SO-1031', 'SO-1030', 'SO-1029', 'SO-1028'], required: true },
-          { name: 'fabric', label: 'Fabric', type: 'select', options: FABRICS.map((f) => `${f.code} · ${f.construction} ${f.name}`), required: true },
-          { name: 'meters', label: 'Planned quantity', type: 'number', suffix: 'm', required: true },
-          { name: 'looms', label: 'Looms', placeholder: 'e.g. L-10, L-11, L-15', required: true },
+          { name: 'fabric', label: TERMS.productOne, type: 'select', options: FABRICS.map((f) => `${f.code} · ${f.construction} ${f.name}`), required: true },
+          { name: 'meters', label: 'Planned quantity', type: 'number', suffix: TERMS.stock, required: true },
+          { name: 'looms', label: TERMS.machines, placeholder: IS_POLY ? 'e.g. M-01, M-12, M-47' : 'e.g. L-10, L-11, L-15', required: true },
           { name: 'start', label: 'Start date', type: 'date', required: true },
           { name: 'end', label: 'Target completion', type: 'date', required: true },
         ]}

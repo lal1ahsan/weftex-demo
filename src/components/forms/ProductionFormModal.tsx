@@ -8,6 +8,7 @@ import { SHIFT_SPLIT } from '@/data/production'
 import { TODAY_ISO } from '@/data/seed'
 import type { ProductionRecord, ShiftName } from '@/types'
 import { cn, num, pct } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 interface Props {
   open: boolean
@@ -64,11 +65,11 @@ export function ProductionFormModal({ open, onClose, defaultLoom, onSaved }: Pro
   const validate = () => {
     const e: Record<string, string> = {}
     if (!v.date) e.date = 'Select a date'
-    if (!v.loomId) e.loomId = 'Select a loom'
+    if (!v.loomId) e.loomId = `Select a ${TERMS.machine.toLowerCase()}`
     if (!v.operator) e.operator = 'Select the operator'
-    if (!v.fabricCode) e.fabricCode = 'Select the fabric'
+    if (!v.fabricCode) e.fabricCode = `Select the ${TERMS.productOne.toLowerCase()}`
     if (!v.target || target <= 0) e.target = 'Enter the shift target'
-    if (!v.actual) e.actual = 'Enter meters produced'
+    if (!v.actual) e.actual = `Enter ${TERMS.outLong} produced`
     else if (actual < 0) e.actual = 'Production cannot be negative'
     else if (target > 0 && actual > target * 1.3) e.actual = `That is ${Math.round((actual / target) * 100)}% of target — please double-check`
     if (v.wastage && (isNaN(Number(v.wastage)) || Number(v.wastage) < 0)) e.wastage = 'Enter wastage in kg'
@@ -92,7 +93,7 @@ export function ProductionFormModal({ open, onClose, defaultLoom, onSaved }: Pro
         remarks: v.remarks,
       })
       setSaving(false)
-      toast.success('Production record added successfully.', `${rec.loomId} · ${v.shift} shift · ${num(actual)} m (${pct(rec.efficiency)})`)
+      toast.success('Production record added successfully.', `${rec.loomId} · ${v.shift} shift · ${num(actual)} ${TERMS.out} (${pct(rec.efficiency)})`)
       onSaved?.(rec)
       if (another) setV((s) => ({ ...empty(), date: s.date, shift: s.shift }))
       else onClose()
@@ -110,11 +111,11 @@ export function ProductionFormModal({ open, onClose, defaultLoom, onSaved }: Pro
       onClose={onClose}
       icon={<ClipboardPlus />}
       title="Add Production"
-      description="Record meters produced by a loom for one shift."
+      description={IS_POLY ? `Record kg produced by a ${TERMS.machine.toLowerCase()} for one shift.` : 'Record meters produced by a loom for one shift.'}
       size="lg"
       footer={
         <>
-          <span className="mr-auto hidden text-xs text-slate-500 sm:block">Tip: selecting a loom fills fabric, operator and target.</span>
+          <span className="mr-auto hidden text-xs text-slate-500 sm:block">Tip: selecting a {TERMS.machine.toLowerCase()} fills {TERMS.productOne.toLowerCase()}, operator and target.</span>
           <Button onClick={onClose}>Cancel</Button>
           <Button onClick={() => save(true)} disabled={saving}>
             Save & add another
@@ -156,10 +157,10 @@ export function ProductionFormModal({ open, onClose, defaultLoom, onSaved }: Pro
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Loom" htmlFor="pf-loom" required error={errors.loomId}>
+          <Field label={TERMS.machine} htmlFor="pf-loom" required error={errors.loomId}>
             <Select
               id="pf-loom"
-              placeholder="Select loom…"
+              placeholder={`Select ${TERMS.machine.toLowerCase()}…`}
               value={v.loomId}
               error={!!errors.loomId}
               onChange={(e) => {
@@ -172,10 +173,10 @@ export function ProductionFormModal({ open, onClose, defaultLoom, onSaved }: Pro
           <Field label="Operator" htmlFor="pf-op" required error={errors.operator}>
             <Select id="pf-op" placeholder="Select operator…" value={v.operator} onChange={(e) => set('operator', e.target.value)} options={operatorOptions} error={!!errors.operator} />
           </Field>
-          <Field label="Fabric" htmlFor="pf-fabric" required error={errors.fabricCode} className="sm:col-span-2">
+          <Field label={TERMS.productOne} htmlFor="pf-fabric" required error={errors.fabricCode} className="sm:col-span-2">
             <Select
               id="pf-fabric"
-              placeholder="Select fabric…"
+              placeholder={`Select ${TERMS.productOne.toLowerCase()}…`}
               value={v.fabricCode}
               onChange={(e) => set('fabricCode', e.target.value)}
               error={!!errors.fabricCode}
@@ -186,10 +187,10 @@ export function ProductionFormModal({ open, onClose, defaultLoom, onSaved }: Pro
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Target" htmlFor="pf-target" required error={errors.target}>
-            <Input id="pf-target" type="number" inputMode="numeric" suffix="m" value={v.target} onChange={(e) => set('target', e.target.value)} error={!!errors.target} />
+            <Input id="pf-target" type="number" inputMode="numeric" suffix={TERMS.out} value={v.target} onChange={(e) => set('target', e.target.value)} error={!!errors.target} />
           </Field>
           <Field label="Actual Production" htmlFor="pf-actual" required error={errors.actual}>
-            <Input id="pf-actual" type="number" inputMode="numeric" suffix="m" placeholder="0" value={v.actual} onChange={(e) => set('actual', e.target.value)} error={!!errors.actual} autoFocus={!!defaultLoom} />
+            <Input id="pf-actual" type="number" inputMode="numeric" suffix={TERMS.out} placeholder="0" value={v.actual} onChange={(e) => set('actual', e.target.value)} error={!!errors.actual} autoFocus={!!defaultLoom} />
           </Field>
           <Field label="Wastage" htmlFor="pf-waste" error={errors.wastage}>
             <Input id="pf-waste" type="number" inputMode="decimal" suffix="kg" placeholder="0.0" value={v.wastage} onChange={(e) => set('wastage', e.target.value)} error={!!errors.wastage} />
@@ -216,13 +217,13 @@ export function ProductionFormModal({ open, onClose, defaultLoom, onSaved }: Pro
                 {loom.manufacturer} {loom.model} · <b className="font-semibold text-slate-800">{loom.rpm} RPM</b>
               </span>
             ) : (
-              <span className="text-slate-400">Select a loom</span>
+              <span className="text-slate-400">Select a {TERMS.machine.toLowerCase()}</span>
             )}
           </div>
         </div>
 
         <Field label="Remarks" htmlFor="pf-remarks">
-          <Textarea id="pf-remarks" placeholder="e.g. Beam change at 11:20, warp breaks on left selvedge" value={v.remarks} onChange={(e) => set('remarks', e.target.value)} />
+          <Textarea id="pf-remarks" placeholder={IS_POLY ? 'e.g. Shuttle changed at 11:20, tape breaks on bobbin 14' : 'e.g. Beam change at 11:20, warp breaks on left selvedge'} value={v.remarks} onChange={(e) => set('remarks', e.target.value)} />
         </Field>
         <button type="submit" className="hidden" />
       </form>

@@ -5,6 +5,7 @@ import { Button, Card, CardBody, CardHeader, DataTable, DetailItem, EmptyState, 
 import { CUSTOMERS, SALES_ORDERS } from '@/data/commercial'
 import { fabricByCode } from '@/data/inventory'
 import { date, num, pct, pkr, pkrCompact } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 
 export default function CustomerDetailPage() {
   const { id = '' } = useParams()
@@ -26,8 +27,8 @@ export default function CustomerDetailPage() {
   const columns: Column<SalesOrder>[] = [
     { key: 'id', header: 'Order', cell: (o) => <span className="font-semibold text-brand-700">{o.id}</span>, sort: (o) => o.id },
     { key: 'date', header: 'Date', cell: (o) => date(o.date), sort: (o) => o.date },
-    { key: 'fabric', header: 'Fabric', cell: (o) => `${fabricByCode(o.fabricCode)?.construction} ${fabricByCode(o.fabricCode)?.name}`, hideBelow: 'md' },
-    { key: 'qty', header: 'Quantity', align: 'right', cell: (o) => `${num(o.quantity)} m` },
+    { key: 'fabric', header: TERMS.productOne, cell: (o) => `${fabricByCode(o.fabricCode)?.construction} ${fabricByCode(o.fabricCode)?.name}`, hideBelow: 'md' },
+    { key: 'qty', header: 'Quantity', align: 'right', cell: (o) => `${num(o.quantity)} ${TERMS.stock}` },
     { key: 'total', header: 'Total', align: 'right', cell: (o) => pkr(o.quantity * o.rate), sort: (o) => o.quantity * o.rate },
     { key: 'status', header: 'Status', cell: (o) => <StatusBadge status={o.status} /> },
   ]

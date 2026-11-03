@@ -4,9 +4,10 @@ import type { Supplier } from '@/types'
 import { Button, DataTable, KpiCard, PageHeader, StatusBadge, type Column } from '@/components/ui'
 import { QuickFormModal } from '@/components/forms/QuickFormModal'
 import { TableActions } from '@/components/common/TableActions'
-import { SUPPLIERS } from '@/data/inventory'
+import { RAW_CATEGORY, SUPPLIERS } from '@/data/inventory'
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { pkrCompact, sum } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 export default function SuppliersPage() {
   const q = useQueryParam('q')
@@ -38,7 +39,7 @@ export default function SuppliersPage() {
     <div>
       <PageHeader
         title="Suppliers"
-        description="Yarn mills, sizing units and spare-part vendors."
+        description={IS_POLY ? 'Granule importers, masterbatch, ink and spare-part vendors.' : 'Yarn mills, sizing units and spare-part vendors.'}
         breadcrumbs={[{ label: 'Purchases' }, { label: 'Suppliers' }]}
         actions={
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setAdding(true)}>
@@ -47,7 +48,7 @@ export default function SuppliersPage() {
         }
       />
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Suppliers" value={SUPPLIERS.length} icon={<Truck />} sub={<span>{SUPPLIERS.filter((s) => s.category === 'Yarn').length} yarn suppliers</span>} />
+        <KpiCard label="Suppliers" value={SUPPLIERS.length} icon={<Truck />} sub={<span>{SUPPLIERS.filter((s) => s.category === RAW_CATEGORY).length} {TERMS.raw.toLowerCase()} suppliers</span>} />
         <KpiCard label="Total Payables" value={pkrCompact(sum(SUPPLIERS, (s) => s.payable))} accent="violet" sub={<span>Who we owe</span>} />
         <KpiCard label="Due This Week" value={pkrCompact(sum(SUPPLIERS.slice(0, 4), (s) => s.payable) * 0.35)} accent="amber" sub={<span>4 payments scheduled</span>} />
       </div>
@@ -71,7 +72,7 @@ export default function SuppliersPage() {
         successMessage="Supplier added successfully."
         fields={[
           { name: 'name', label: 'Company name', required: true, full: true },
-          { name: 'category', label: 'Category', type: 'select', options: ['Yarn', 'Sizing', 'Spare Parts', 'Packaging', 'Consumables', 'Electrical'], required: true },
+          { name: 'category', label: 'Category', type: 'select', options: IS_POLY ? ['Granules', 'Masterbatch', 'Film', 'Ink', 'Thread', 'Spare Parts', 'Packaging', 'Consumables', 'Electrical'] : ['Yarn', 'Sizing', 'Spare Parts', 'Packaging', 'Consumables', 'Electrical'], required: true },
           { name: 'city', label: 'City', required: true },
           { name: 'contact', label: 'Contact person', required: true },
           { name: 'phone', label: 'Mobile', type: 'tel', required: true },

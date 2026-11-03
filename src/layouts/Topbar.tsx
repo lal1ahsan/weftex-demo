@@ -8,6 +8,7 @@ import { useClickOutside } from '@/hooks/useClickOutside'
 import { cn } from '@/utils/format'
 import { GlobalSearch } from './GlobalSearch'
 import type { AppNotification } from '@/types'
+import { TERMS } from '@/data/dataset'
 
 function Dropdown({ open, onClose, children, className }: { open: boolean; onClose: () => void; children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -118,7 +119,7 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
           aria-label="Search"
         >
           <Search className="size-4" />
-          <span className="hidden truncate md:inline">Search looms, yarn, orders…</span>
+          <span className="hidden truncate md:inline">Search {TERMS.machines.toLowerCase()}, {TERMS.raw.toLowerCase()}, orders…</span>
           <kbd className="ml-auto hidden rounded-md border border-line bg-white px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-slate-400 lg:inline">Ctrl K</kbd>
         </button>
 

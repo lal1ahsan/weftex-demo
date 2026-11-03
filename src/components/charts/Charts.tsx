@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { compact, meters, pct, duration } from '@/utils/format'
+import { TERMS } from '@/data/dataset'
 import { CHART, ChartTooltip, SERIES, axisProps } from './ChartKit'
 
 export function ProductionTrendChart({ data, height = 280 }: { data: { label: string; actual: number; target: number }[]; height?: number }) {
@@ -69,7 +70,7 @@ export function LoomEfficiencyChart({ data, height = 280 }: { data: { loomId: st
         <CartesianGrid vertical={false} stroke={CHART.grid} />
         <XAxis dataKey="loomId" {...axisProps} interval={data.length > 24 ? 'preserveStartEnd' : 0} dy={8} />
         <YAxis {...axisProps} domain={[0, 110]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(v) => `${v}%`} />
-        <Tooltip content={<ChartTooltip formatter={(v) => pct(v)} labelFormatter={(l) => `Loom ${l} · click to open`} />} />
+        <Tooltip content={<ChartTooltip formatter={(v) => pct(v)} labelFormatter={(l) => `${TERMS.machine} ${l} · click to open`} />} />
         <Bar dataKey="efficiency" name="Efficiency" radius={[4, 4, 0, 0]} onClick={(d: { loomId?: string }) => d.loomId && navigate(`/looms/${d.loomId}`)} className="cursor-pointer">
           {data.map((d) => (
             <Cell key={d.loomId} fill={effColor(d.efficiency)} />
@@ -85,6 +86,8 @@ export const DOWNTIME_COLORS: Record<string, string> = {
   Electrical: SERIES[1],
   'Yarn Issue': SERIES[2],
   'Beam Issue': SERIES[3],
+  'Tape Issue': SERIES[2],
+  'Print Issue': SERIES[3],
   Maintenance: SERIES[4],
   Operator: SERIES[5],
   'Material Shortage': SERIES[6],

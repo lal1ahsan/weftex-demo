@@ -10,6 +10,7 @@ import { dailyTrend, onDate, totals, YESTERDAY_ISO } from '@/data/metrics'
 import { yarnUsedKg } from '@/data/production'
 import { TODAY_ISO } from '@/data/seed'
 import { cn, kg, num, pct, pkr } from '@/utils/format'
+import { IS_POLY, TERMS } from '@/data/dataset'
 
 interface Row {
   code: string
@@ -20,6 +21,10 @@ interface Row {
   wasteKg: number
   pct: number
 }
+
+/** Poly bags lose more in extrusion and cutting than weaving loses between issue and fabric. */
+const BENCHMARK = IS_POLY ? 3.5 : 2.5
+const [AMBER_AT, RED_AT] = IS_POLY ? [3.2, 3.6] : [2.3, 2.6]
 
 export default function WastagePage() {
   const { production } = useApp()
@@ -41,9 +46,9 @@ export default function WastagePage() {
   )
 
   const columns: Column<Row>[] = [
-    { key: 'fabric', header: 'Fabric', cell: (r) => <span><b className="font-semibold text-slate-900">{r.construction}</b> <span className="text-slate-500">{r.name}</span></span>, sort: (r) => r.name },
-    { key: 'produced', header: 'Produced', align: 'right', cell: (r) => `${num(r.produced)} m`, sort: (r) => r.produced, hideBelow: 'md' },
-    { key: 'yarn', header: 'Yarn Used', align: 'right', cell: (r) => kg(r.yarnKg), sort: (r) => r.yarnKg },
+    { key: 'fabric', header: TERMS.productOne, cell: (r) => <span><b className="font-semibold text-slate-900">{r.construction}</b> <span className="text-slate-500">{r.name}</span></span>, sort: (r) => r.name },
+    { key: 'produced', header: 'Produced', align: 'right', cell: (r) => `${num(r.produced)} ${TERMS.out}`, sort: (r) => r.produced, hideBelow: 'md' },
+    { key: 'yarn', header: `${TERMS.raw} Used`, align: 'right', cell: (r) => kg(r.yarnKg), sort: (r) => r.yarnKg },
     { key: 'waste', header: 'Wastage', align: 'right', cell: (r) => kg(r.wasteKg), sort: (r) => r.wasteKg },
     {
       key: 'pct',
@@ -52,8 +57,8 @@ export default function WastagePage() {
       sort: (r) => r.pct,
       cell: (r) => (
         <div className="ml-auto flex w-32 items-center gap-2">
-          <ProgressBar value={r.pct} max={4} tone={r.pct > 2.6 ? 'red' : r.pct > 2.3 ? 'amber' : 'green'} />
-          <span className={cn('w-12 font-semibold', r.pct > 2.6 ? 'text-rose-600' : 'text-slate-800')}>{pct(r.pct, 2)}</span>
+          <ProgressBar value={r.pct} max={4} tone={r.pct > RED_AT ? 'red' : r.pct > AMBER_AT ? 'amber' : 'green'} />
+          <span className={cn('w-12 font-semibold', r.pct > RED_AT ? 'text-rose-600' : 'text-slate-800')}>{pct(r.pct, 2)}</span>
         </div>
       ),
     },
@@ -62,16 +67,16 @@ export default function WastagePage() {
 
   return (
     <div>
-      <PageHeader title="Wastage" description="Where yarn is being lost between issue and finished fabric." breadcrumbs={[{ label: 'Production', to: '/production' }, { label: 'Wastage' }]} />
+      <PageHeader title="Wastage" description={IS_POLY ? `Where ${TERMS.raw.toLowerCase()} is being lost between issue and finished bags.` : 'Where yarn is being lost between issue and finished fabric.'} breadcrumbs={[{ label: 'Production', to: '/production' }, { label: 'Wastage' }]} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Wastage Today" value={pct(today.wastagePct)} icon={<Recycle />} accent="amber" delta={{ value: `${Math.abs(today.wastagePct - yesterday.wastagePct).toFixed(1)}%`, direction: today.wastagePct <= yesterday.wastagePct ? 'down' : 'up', good: today.wastagePct <= yesterday.wastagePct, label: 'vs yesterday' }} />
-        <KpiCard label="Wastage Today (kg)" value={num(today.wasteKg)} unit="kg" icon={<Scale />} accent="red" sub={<span>≈ {pkr(today.wasteKg * avgYarnRate)} of yarn</span>} />
+        <KpiCard label="Wastage Today (kg)" value={num(today.wasteKg)} unit="kg" icon={<Scale />} accent="red" sub={<span>≈ {pkr(today.wasteKg * avgYarnRate)} of {TERMS.raw.toLowerCase()}</span>} />
         <KpiCard label="7-day Wastage" value={pct(week.wastagePct)} icon={<TrendingDown />} accent="slate" sub={<span>{num(week.wasteKg)} kg in 7 days</span>} />
-        <KpiCard label="Yarn Consumed Today" value={num(today.yarnKg)} unit="kg" icon={<Spool />} accent="violet" />
+        <KpiCard label={`${TERMS.raw} Consumed Today`} value={num(today.yarnKg)} unit="kg" icon={<Spool />} accent="violet" />
       </div>
 
       <Card className="mt-4">
-        <CardHeader title="Wastage Trend" subtitle="Last 7 days · factory benchmark 2.5%" />
+        <CardHeader title="Wastage Trend" subtitle={`Last 7 days · factory benchmark ${BENCHMARK}%`} />
         <CardBody>
           <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={trend} margin={{ left: -12, right: 8, top: 8 }}>
@@ -83,9 +88,9 @@ export default function WastagePage() {
               </defs>
               <CartesianGrid vertical={false} stroke={CHART.grid} />
               <XAxis dataKey="label" {...axisProps} dy={8} />
-              <YAxis {...axisProps} domain={[1.5, 3.5]} tickFormatter={(v) => `${v}%`} />
+              <YAxis {...axisProps} domain={IS_POLY ? [2, 4.5] : [1.5, 3.5]} tickFormatter={(v) => `${v}%`} />
               <Tooltip content={<ChartTooltip formatter={(v) => pct(v, 2)} />} />
-              <ReferenceLine y={2.5} stroke={CHART.rose} strokeDasharray="4 4" label={{ value: 'Benchmark 2.5%', position: 'insideTopRight', fill: CHART.rose, fontSize: 12 }} />
+              <ReferenceLine y={BENCHMARK} stroke={CHART.rose} strokeDasharray="4 4" label={{ value: `Benchmark ${BENCHMARK}%`, position: 'insideTopRight', fill: CHART.rose, fontSize: 12 }} />
               <Area type="monotone" dataKey="wastagePct" name="Wastage" stroke={CHART.amber} strokeWidth={2.5} fill="url(#wasteFill)" dot={{ r: 3, fill: '#fff', strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
@@ -93,7 +98,7 @@ export default function WastagePage() {
       </Card>
 
       <div className="mt-4">
-        <DataTable title="Wastage by Fabric" subtitle="Last 7 days" data={rows} columns={columns} rowKey={(r) => r.code} defaultSort={{ key: 'pct', dir: 'desc' }} actions={<TableActions />} />
+        <DataTable title={`Wastage by ${TERMS.productOne}`} subtitle="Last 7 days" data={rows} columns={columns} rowKey={(r) => r.code} defaultSort={{ key: 'pct', dir: 'desc' }} actions={<TableActions />} />
       </div>
     </div>
   )
